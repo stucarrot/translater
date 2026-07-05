@@ -369,16 +369,33 @@ function formatVocabList(items){
   });
   return ['[단어장]', ...lines].join('\n');
 }
-async function buildVocabMap(blocks, sourceLang, targetLang, levelName, onProgress){
+function pickVocabWords(candidateWords, thresholdIdx, maxWords){
+  // candidateWords: array of {word, level}, already filtered to level >= thresholdIdx, in appearance order.
+  // Priority: words matching the selected level first, then next-higher levels in order, until maxWords reached.
+  const groups = {};
+  candidateWords.forEach(o=>{
+    if (!groups[o.level]) groups[o.level] = [];
+    if (!groups[o.level].includes(o.word)) groups[o.level].push(o.word);
+  });
+  const ordered = [];
+  for (let lvl = thresholdIdx; lvl < LEVEL_ORDER.length; lvl++){
+    if (groups[lvl]) ordered.push(...groups[lvl]);
+    if (ordered.length >= maxWords) break;
+  }
+  return ordered.slice(0, maxWords);
+}
+async function buildVocabMap(blocks, sourceLang, targetLang, levelName, maxWords, onProgress){
   const vocabMap = {};
   if (!SUPPORTED_VOCAB_LANGS.includes(sourceLang)) return vocabMap;
   const thresholdIdx = LEVEL_ORDER.indexOf(levelName);
   if (thresholdIdx === -1) return vocabMap;
+  const cap = Math.max(1, Math.min(10, maxWords || 6));
   let done = 0;
   for (const b of blocks){
-    const words = Array.from(new Set(tokenizeByLang(sourceLang, b.text)))
-      .filter(w=> getWordLevelIndex(sourceLang, w) >= thresholdIdx)
-      .slice(0, 6);
+    const candidateWords = Array.from(new Set(tokenizeByLang(sourceLang, b.text)))
+      .map(w=> ({ word:w, level: getWordLevelIndex(sourceLang, w) }))
+      .filter(o=> o.level >= thresholdIdx);
+    const words = pickVocabWords(candidateWords, thresholdIdx, cap);
     if (words.length){
       const items = [];
       for (const w of words){
@@ -407,7 +424,8 @@ function newSlot(seed){
     target: seed?seed.target:'ko',
     position: seed?seed.position:'below',
     vocabEnabled: seed?!!seed.vocabEnabled:false,
-    vocabLevel: seed?seed.vocabLevel:'B1'
+    vocabLevel: seed?seed.vocabLevel:'B1',
+    vocabMaxWords: seed?(seed.vocabMaxWords||6):6
   };
 }
 
@@ -501,7 +519,7 @@ function renderFileBlockList(){
     div.className = 'file-block' + (f.id===selectedFileId ? ' selected' : '');
     const countText = f.parseError ? `<span style="color:var(--danger)">${escapeHtml(f.parseError)}</span>` : (f.blocks ? `${f.blocks.length}개 블록` : '분석 중...');
     const chips = f.slots.map(s=>{
-      const vocab = s.vocabEnabled ? `<span class="vocab-chip">📘${s.vocabLevel}+</span>` : '';
+      const vocab = s.vocabEnabled ? `<span class="vocab-chip">📘${s.vocabLevel}+ ${s.vocabMaxWords}개</span>` : '';
       return `<span class="lang-chip">${langName(s.target)}</span>${vocab}`;
     }).join('');
     div.innerHTML = `
@@ -607,6 +625,7 @@ function renderSlotCards(container, f){
     const targetOpts = LANGS.map(([c,n])=>`<option value="${c}" ${slot.target===c?'selected':''}>${n}</option>`).join('');
     const vocabSupported = slot.source==='auto' || SUPPORTED_VOCAB_LANGS.includes(slot.source);
     const levelOpts = LEVEL_ORDER.map(l=>`<option value="${l}" ${slot.vocabLevel===l?'selected':''}>${l} 이상</option>`).join('');
+    const countOpts = Array.from({length:10}, (_,i)=>i+1).map(n=>`<option value="${n}" ${slot.vocabMaxWords===n?'selected':''}>${n}개</option>`).join('');
     card.innerHTML = `
       <div class="slot-index">${idx+1}</div>
       <div class="slot-grid">
@@ -625,6 +644,7 @@ function renderSlotCards(container, f){
         </div>
         <div class="vocab-level-row" style="${slot.vocabEnabled?'':'display:none'}">
           <select class="vocab-level-select">${levelOpts}</select>
+          <select class="vocab-count-select">${countOpts}</select>
         </div>
         <div class="vocab-note">${vocabSupported ? '원문이 영어·스페인어·러시아어일 때만 적용됩니다 (자막 빈도 데이터 기반 근사 등급).' : '이 원본 언어는 아직 단어 학습 기능을 지원하지 않아요.'}</div>
       </div>
@@ -649,6 +669,7 @@ function renderSlotCards(container, f){
       renderFileBlockList();
     });
     card.querySelector('.vocab-level-select').addEventListener('change', e=>{ slot.vocabLevel = e.target.value; renderFileBlockList(); });
+    card.querySelector('.vocab-count-select').addEventListener('change', e=>{ slot.vocabMaxWords = parseInt(e.target.value,10) || 6; });
     const rmBtn = card.querySelector('.slot-remove');
     if (rmBtn) rmBtn.addEventListener('click', ()=>{ f.slots = f.slots.filter(s=>s.id!==slot.id); renderSlotCards(container, f); renderFileBlockList(); });
     container.appendChild(card);
@@ -1045,7 +1066,7 @@ async function runTranslation(files){
           const effectiveSource = slot.source === 'auto' ? detectedSource : slot.source;
           if (effectiveSource && SUPPORTED_VOCAB_LANGS.includes(effectiveSource)){
             setStatus(`${tag} 단어장 생성 중...`);
-            vocabMap = await buildVocabMap(parsed.blocks, effectiveSource, slot.target, slot.vocabLevel, (d,t)=> setStatus(`${tag} 단어장: ${d}/${t}`));
+            vocabMap = await buildVocabMap(parsed.blocks, effectiveSource, slot.target, slot.vocabLevel, slot.vocabMaxWords, (d,t)=> setStatus(`${tag} 단어장: ${d}/${t}`));
           } else {
             appendLog(`⚠️ ${tag}: 단어장은 영어/스페인어/러시아어 원문에서만 지원되어 건너뜁니다 (감지된 언어: ${effectiveSource||'알수없음'}).`);
           }
