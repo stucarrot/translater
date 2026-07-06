@@ -963,33 +963,72 @@ async function gtranslateRaw(text, sl, tl){
   const detected = data[2] || null;
   return { translated, detected };
 }
-function chunkBlocks(blocks, maxChars){
-  const chunks = []; let cur = []; let len = 0;
-  blocks.forEach(b=>{
-    const l = b.text.length+1;
-    if (len+l>maxChars && cur.length){ chunks.push(cur); cur=[]; len=0; }
-    cur.push(b); len += l;
-  });
+
+/* ---- 마커 기반 정렬: 구글 번역이 "번역 불가 토큰"으로 취급해 잘 보존하는
+   드문 특수문자(‖ + 인덱스)를 각 블록 앞에 심어서, 줄바꿈 대신 이 마커를
+   기준으로 원문/역문을 다시 정렬한다. 여러 자막을 한 번에 보내되 정확한
+   경계를 유지하기 위한 장치. ---- */
+const ANCHOR = '\u2016'; // ‖ DOUBLE VERTICAL LINE — 일반 텍스트에 거의 등장하지 않음
+function buildMarkedText(blocks){
+  return blocks.map((b,i)=> `${ANCHOR}${i}${ANCHOR} ${b.text.replace(/\n+/g,' ').trim()}`).join('  ');
+}
+function parseMarkedText(translated, count){
+  const re = new RegExp(ANCHOR+'\\s*(\\d+)\\s*'+ANCHOR,'g');
+  const marks = [...translated.matchAll(re)];
+  if (marks.length !== count) return null;
+  const result = new Array(count);
+  for (let i=0;i<marks.length;i++){
+    const idx = parseInt(marks[i][1],10);
+    if (!Number.isInteger(idx) || idx<0 || idx>=count) return null;
+    const start = marks[i].index + marks[i][0].length;
+    const end = i+1<marks.length ? marks[i+1].index : translated.length;
+    result[idx] = translated.slice(start,end).trim();
+  }
+  for (let i=0;i<count;i++){ if (result[i]===undefined) return null; }
+  return result;
+}
+
+/* ---- 문장경계 인식 청킹: 고정 글자수 대신, 목표 블록 수에 도달한 뒤
+   문장이 끝나는 지점(마침표/물음표/느낌표/따옴표 등)에서 자른다.
+   대화가 중간에 뚝 끊긴 채로 다음 청크로 넘어가는 것을 최대한 방지. ---- */
+function chunkBlocksSmart(blocks, targetSize, maxSize){
+  const endsSentence = t => /[.!?…"'”)\]]\s*$/.test(t.trim());
+  const chunks = []; let cur = [];
+  for (let i=0;i<blocks.length;i++){
+    cur.push(blocks[i]);
+    if (cur.length>=targetSize && (endsSentence(blocks[i].text) || cur.length>=maxSize)){
+      chunks.push(cur); cur=[];
+    }
+  }
   if (cur.length) chunks.push(cur);
   return chunks;
 }
+
 async function translateBlocks(blocks, sourceLang, targetLang, onProgress){
   const translations = {};
   let detectedSource = null;
   if (!blocks.length) return { translations, detectedSource };
-  const chunks = chunkBlocks(blocks, 1500);
+  const chunks = chunkBlocksSmart(blocks, 12, 20);
+  const CONTEXT_BEFORE = 2, CONTEXT_AFTER = 1; // 슬라이딩 윈도우: 앞뒤 문맥은 번역만 참고하고 결과는 버림
   let done = 0;
-  for (const chunk of chunks){
-    const joined = chunk.map(b=>b.text.replace(/\n+/g,' ').trim()).join('\n');
+  for (let c=0;c<chunks.length;c++){
+    const core = chunks[c];
+    const before = c>0 ? chunks[c-1].slice(-CONTEXT_BEFORE) : [];
+    const after = c<chunks.length-1 ? chunks[c+1].slice(0,CONTEXT_AFTER) : [];
+    const windowBlocks = [...before, ...core, ...after];
     let ok = false;
     try{
-      const { translated, detected } = await gtranslateRaw(joined, sourceLang, targetLang);
+      const marked = buildMarkedText(windowBlocks);
+      const { translated, detected } = await gtranslateRaw(marked, sourceLang, targetLang);
       if (detected && !detectedSource) detectedSource = detected;
-      const lines = translated.split('\n');
-      if (lines.length === chunk.length){ chunk.forEach((b,i)=> translations[b.id] = lines[i]); ok = true; }
+      const parsed = parseMarkedText(translated, windowBlocks.length);
+      if (parsed){
+        for (let i=0;i<core.length;i++) translations[core[i].id] = parsed[before.length+i];
+        ok = true;
+      }
     } catch(e){ /* fall through */ }
     if (!ok){
-      for (const b of chunk){
+      for (const b of core){
         try{
           const { translated, detected } = await gtranslateRaw(b.text, sourceLang, targetLang);
           if (detected && !detectedSource) detectedSource = detected;
@@ -998,7 +1037,7 @@ async function translateBlocks(blocks, sourceLang, targetLang, onProgress){
         await sleep(100);
       }
     }
-    done += chunk.length;
+    done += core.length;
     onProgress && onProgress(done, blocks.length);
     await sleep(120);
   }
