@@ -964,16 +964,17 @@ async function gtranslateRaw(text, sl, tl){
   return { translated, detected };
 }
 
-/* ---- 마커 기반 정렬: 구글 번역이 "번역 불가 토큰"으로 취급해 잘 보존하는
-   드문 특수문자(‖ + 인덱스)를 각 블록 앞에 심어서, 줄바꿈 대신 이 마커를
-   기준으로 원문/역문을 다시 정렬한다. 여러 자막을 한 번에 보내되 정확한
-   경계를 유지하기 위한 장치. ---- */
-const ANCHOR = '\u2016'; // ‖ DOUBLE VERTICAL LINE — 일반 텍스트에 거의 등장하지 않음
-function buildMarkedText(blocks){
-  return blocks.map((b,i)=> `${ANCHOR}${i}${ANCHOR} ${b.text.replace(/\n+/g,' ').trim()}`).join('  ');
+/* ---- 마커 기반 정렬: 언어쌍에 따라 어떤 특수문자가 구글 번역을 통과하며
+   살아남는지가 다르기 때문에(한 마커가 특정 언어쌍에서는 사라지거나
+   숫자가 단어로 번역돼버릴 수 있음), 여러 후보를 순서대로 시도해서
+   실제로 개수가 맞게 살아남는 마커를 채택한다. ---- */
+const ANCHOR_CANDIDATES = ['\u2016', '@@', '###', '%%%', '|||'];
+function buildMarkedText(blocks, anchor){
+  return blocks.map((b,i)=> `${anchor}${i}${anchor} ${b.text.replace(/\n+/g,' ').trim()}`).join('  ');
 }
-function parseMarkedText(translated, count){
-  const re = new RegExp(ANCHOR+'\\s*(\\d+)\\s*'+ANCHOR,'g');
+function parseMarkedText(translated, count, anchor){
+  const escaped = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(escaped+'\\s*(\\d+)\\s*'+escaped,'g');
   const marks = [...translated.matchAll(re)];
   if (marks.length !== count) return null;
   const result = new Array(count);
@@ -986,6 +987,27 @@ function parseMarkedText(translated, count){
   }
   for (let i=0;i<count;i++){ if (result[i]===undefined) return null; }
   return result;
+}
+/* 여러 마커 후보를 순서대로 시도. 첫 chunk에서 성공한 마커는 캐시해서
+   같은 언어쌍 내에서는 매번 재시도하지 않고 바로 그 마커부터 쓴다. */
+const workingAnchorByPair = {};
+async function translateWindowMarked(windowBlocks, sourceLang, targetLang){
+  const pairKey = sourceLang+'>'+targetLang;
+  const tryOrder = workingAnchorByPair[pairKey]
+    ? [workingAnchorByPair[pairKey], ...ANCHOR_CANDIDATES.filter(a=>a!==workingAnchorByPair[pairKey])]
+    : ANCHOR_CANDIDATES;
+  for (const anchor of tryOrder){
+    try{
+      const marked = buildMarkedText(windowBlocks, anchor);
+      const { translated, detected } = await gtranslateRaw(marked, sourceLang, targetLang);
+      const parsed = parseMarkedText(translated, windowBlocks.length, anchor);
+      if (parsed){
+        workingAnchorByPair[pairKey] = anchor;
+        return { parsed, detected };
+      }
+    } catch(e){ /* try next anchor */ }
+  }
+  return null;
 }
 
 /* ---- 문장경계 인식 청킹: 고정 글자수 대신, 목표 블록 수에 도달한 뒤
@@ -1004,43 +1026,65 @@ function chunkBlocksSmart(blocks, targetSize, maxSize){
   return chunks;
 }
 
+/* 동시에 몇 개의 청크를 병렬로 처리할지. 너무 높이면 구글이 일시 차단(429/403)할 수 있음. */
+const CHUNK_CONCURRENCY = 4;
+
 async function translateBlocks(blocks, sourceLang, targetLang, onProgress){
   const translations = {};
   let detectedSource = null;
   if (!blocks.length) return { translations, detectedSource };
   const chunks = chunkBlocksSmart(blocks, 12, 20);
   const CONTEXT_BEFORE = 2, CONTEXT_AFTER = 1; // 슬라이딩 윈도우: 앞뒤 문맥은 번역만 참고하고 결과는 버림
+
+  // 완전히 동일한 원문 줄(반복 대사, 감탄사 등)은 한 번만 번역하고 재사용
+  const textCache = new Map(); // text -> translated
+
   let done = 0;
-  for (let c=0;c<chunks.length;c++){
+  const total = blocks.length;
+  const bump = n => { done += n; onProgress && onProgress(done, total); };
+
+  async function processChunk(c){
     const core = chunks[c];
     const before = c>0 ? chunks[c-1].slice(-CONTEXT_BEFORE) : [];
     const after = c<chunks.length-1 ? chunks[c+1].slice(0,CONTEXT_AFTER) : [];
     const windowBlocks = [...before, ...core, ...after];
-    let ok = false;
-    try{
-      const marked = buildMarkedText(windowBlocks);
-      const { translated, detected } = await gtranslateRaw(marked, sourceLang, targetLang);
-      if (detected && !detectedSource) detectedSource = detected;
-      const parsed = parseMarkedText(translated, windowBlocks.length);
-      if (parsed){
-        for (let i=0;i<core.length;i++) translations[core[i].id] = parsed[before.length+i];
-        ok = true;
+
+    const result = await translateWindowMarked(windowBlocks, sourceLang, targetLang);
+    if (result){
+      if (result.detected && !detectedSource) detectedSource = result.detected;
+      for (let i=0;i<core.length;i++){
+        const t = result.parsed[before.length+i];
+        translations[core[i].id] = t;
+        textCache.set(core[i].text, t);
       }
-    } catch(e){ /* fall through */ }
-    if (!ok){
-      for (const b of core){
-        try{
-          const { translated, detected } = await gtranslateRaw(b.text, sourceLang, targetLang);
-          if (detected && !detectedSource) detectedSource = detected;
-          translations[b.id] = translated;
-        } catch(e){ translations[b.id] = b.text; }
-        await sleep(100);
-      }
+      bump(core.length);
+      return;
     }
-    done += core.length;
-    onProgress && onProgress(done, blocks.length);
-    await sleep(120);
+    // 폴백: 개별 번역, 단 캐시에 이미 있으면 재요청하지 않음
+    for (const b of core){
+      if (textCache.has(b.text)){ translations[b.id] = textCache.get(b.text); bump(1); continue; }
+      try{
+        const { translated, detected } = await gtranslateRaw(b.text, sourceLang, targetLang);
+        if (detected && !detectedSource) detectedSource = detected;
+        translations[b.id] = translated;
+        textCache.set(b.text, translated);
+      } catch(e){ translations[b.id] = b.text; }
+      bump(1);
+      await sleep(60);
+    }
   }
+
+  // 동시성 제한 워커 풀: 청크들을 순서대로 꺼내되 CHUNK_CONCURRENCY개씩 병렬 처리
+  let nextIndex = 0;
+  async function worker(){
+    while (nextIndex < chunks.length){
+      const c = nextIndex++;
+      await processChunk(c);
+      await sleep(80);
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(CHUNK_CONCURRENCY, chunks.length)}, worker));
+
   return { translations, detectedSource };
 }
 
