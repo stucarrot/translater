@@ -425,7 +425,8 @@ function newSlot(seed){
     position: seed?seed.position:'below',
     vocabEnabled: seed?!!seed.vocabEnabled:false,
     vocabLevel: seed?seed.vocabLevel:'B1',
-    vocabMaxWords: seed?(seed.vocabMaxWords||6):6
+    vocabMaxWords: seed?(seed.vocabMaxWords||6):6,
+    glossary: seed?(seed.glossary||''):''
   };
 }
 
@@ -648,9 +649,15 @@ function renderSlotCards(container, f){
         </div>
         <div class="vocab-note">${vocabSupported ? '원문이 영어·스페인어·러시아어일 때만 적용됩니다 (자막 빈도 데이터 기반 근사 등급).' : '이 원본 언어는 아직 단어 학습 기능을 지원하지 않아요.'}</div>
       </div>
+      <div class="vocab-box">
+        <div class="vocab-toprow"><label>🔒 고유명사·용어 고정</label></div>
+        <textarea class="textinput glossary-input" rows="3" placeholder="한 줄에 하나씩, '원문=번역' 형식&#10;예) Совочка=소보치카&#10;예) Семён=세묜" style="resize:vertical; font-family:var(--mono); font-size:11.5px;">${escapeHtml(slot.glossary||'')}</textarea>
+        <div class="vocab-note">같은 인물·용어가 자막마다 다르게 번역되는 문제를 막기 위해, 지정한 표현으로 결과물에서 강제 치환합니다.</div>
+      </div>
       <div class="slot-footer">${f.slots.length>1 ? '<button class="slot-remove">삭제</button>' : ''}</div>
     `;
     const vocabLevelRow = card.querySelector('.vocab-level-row');
+    card.querySelector('.glossary-input').addEventListener('input', e=>{ slot.glossary = e.target.value; });
     card.querySelector('.src-select').addEventListener('change', e=>{
       slot.source = e.target.value;
       renderSlotCards(container, f);
@@ -1029,6 +1036,42 @@ function chunkBlocksSmart(blocks, targetSize, maxSize){
 /* 동시에 몇 개의 청크를 병렬로 처리할지. 너무 높이면 구글이 일시 차단(429/403)할 수 있음. */
 const CHUNK_CONCURRENCY = 4;
 
+/* ---- 용어 고정(글로서리): "원문=번역" 줄들을 파싱해서, 번역 결과에
+   최종적으로 강제 치환을 적용한다. 같은 이름/용어가 문맥에 따라 다르게
+   번역되는 문제(예: 세묜/세면, 소보치카/스쿠프)를 사용자가 직접 잡을 수 있게. ---- */
+function parseGlossary(text){
+  if (!text) return [];
+  return text.split('\n').map(line=>{
+    const idx = line.indexOf('=');
+    if (idx<0) return null;
+    const from = line.slice(0,idx).trim();
+    const to = line.slice(idx+1).trim();
+    if (!from || !to) return null;
+    return { from, to };
+  }).filter(Boolean).sort((a,b)=> b.from.length - a.from.length); // 긴 표현부터 치환해야 부분일치 충돌이 없음
+}
+function applyGlossary(text, pairs){
+  if (!text || !pairs.length) return text;
+  let out = text;
+  for (const { from, to } of pairs){
+    out = out.split(from).join(to);
+  }
+  return out;
+}
+
+/* ---- 분할 오류 감지: 문장이 다음/이전 자막 큐로 잘못 통째로 쏠려서
+   이 블록의 번역 결과가 사실상 비어있거나 부호만 남는 경우를 잡아낸다.
+   (러시아어 종속절이 여러 큐에 걸쳐 나뉘어 있을 때, 한국어 어순 재배열 때문에
+   특정 큐가 텅 비어버리는 경우가 생김) ---- */
+function isSuspectTranslation(orig, tr){
+  if (tr===undefined || tr===null) return true;
+  const stripped = String(tr).replace(/[\s.!?…"'“”'`\-,;:·]/g,'');
+  if (stripped.length===0) return true;
+  const origStripped = orig.replace(/[\s.!?…"'“”'`\-,;:·]/g,'');
+  if (origStripped.length>=6 && stripped.length < Math.max(2, origStripped.length*0.15)) return true;
+  return false;
+}
+
 async function translateBlocks(blocks, sourceLang, targetLang, onProgress){
   const translations = {};
   let detectedSource = null;
@@ -1056,6 +1099,18 @@ async function translateBlocks(blocks, sourceLang, targetLang, onProgress){
         const t = result.parsed[before.length+i];
         translations[core[i].id] = t;
         textCache.set(core[i].text, t);
+      }
+      // 분할 오류 복구: 내용이 옆 큐로 쏠려 텅 비거나 조각만 남은 경우, 그 블록만
+      // 문맥 없이 단독으로 재번역해서 최소한 "빈 자막"은 나오지 않게 한다.
+      for (const b of core){
+        if (isSuspectTranslation(b.text, translations[b.id])){
+          try{
+            const { translated, detected } = await gtranslateRaw(b.text, sourceLang, targetLang);
+            if (detected && !detectedSource) detectedSource = detected;
+            translations[b.id] = translated;
+            textCache.set(b.text, translated);
+          } catch(e){ /* 실패하면 기존 값 유지 */ }
+        }
       }
       bump(core.length);
       return;
@@ -1143,6 +1198,11 @@ async function runTranslation(files){
       setStatus(`${tag} 번역 준비 중...`);
       try{
         const { translations, detectedSource } = await translateBlocks(parsed.blocks, slot.source, slot.target, (d,t)=> setStatus(`${tag} 진행: ${d}/${t}`));
+
+        const glossaryPairs = parseGlossary(slot.glossary);
+        if (glossaryPairs.length){
+          Object.keys(translations).forEach(id=>{ translations[id] = applyGlossary(translations[id], glossaryPairs); });
+        }
 
         let vocabMap = {};
         if (slot.vocabEnabled){
