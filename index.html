@@ -1017,16 +1017,27 @@ async function translateWindowMarked(windowBlocks, sourceLang, targetLang){
   return null;
 }
 
-/* ---- 문장경계 인식 청킹: 고정 글자수 대신, 목표 블록 수에 도달한 뒤
-   문장이 끝나는 지점(마침표/물음표/느낌표/따옴표 등)에서 자른다.
-   대화가 중간에 뚝 끊긴 채로 다음 청크로 넘어가는 것을 최대한 방지. ---- */
-function chunkBlocksSmart(blocks, targetSize, maxSize){
+/* ---- 문장경계 인식 청킹: 목표 블록 수에 도달한 뒤 문장이 끝나는 지점에서
+   자른다. 단, 자막처럼 짧은 블록이 아니라 epub/txt처럼 문단 하나가 긴
+   경우를 대비해 총 글자수 상한(maxChars)도 함께 건다 — 안 그러면 구글
+   무료 엔드포인트가 감당 못 할 만큼 긴 요청이 나가서 매번 실패→개별
+   폴백으로 새며, 문맥 효과 없이 느려지기만 한다. ---- */
+function chunkBlocksSmart(blocks, targetSize, maxSize, maxChars){
+  maxChars = maxChars || 1800;
   const endsSentence = t => /[.!?…"'”)\]]\s*$/.test(t.trim());
-  const chunks = []; let cur = [];
+  const chunks = []; let cur = []; let curChars = 0;
   for (let i=0;i<blocks.length;i++){
-    cur.push(blocks[i]);
-    if (cur.length>=targetSize && (endsSentence(blocks[i].text) || cur.length>=maxSize)){
-      chunks.push(cur); cur=[];
+    const b = blocks[i];
+    const len = b.text.length;
+    // 이미 담긴 게 있는데 이 블록까지 더하면 글자수 상한을 넘는다면, 먼저 지금까지를 마감
+    if (cur.length && (curChars + len > maxChars)){
+      chunks.push(cur); cur = []; curChars = 0;
+    }
+    cur.push(b); curChars += len;
+    const hitTarget = cur.length>=targetSize && endsSentence(b.text);
+    const hitCap = cur.length>=maxSize || curChars>=maxChars;
+    if (hitTarget || hitCap){
+      chunks.push(cur); cur=[]; curChars=0;
     }
   }
   if (cur.length) chunks.push(cur);
