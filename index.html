@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 <style>
   :root{
     --bg: #ffffff;
@@ -103,7 +102,6 @@
   .fb-top .fb-remove:hover{ color: var(--danger); }
   .fb-meta{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11px; color: var(--text-faint); font-family: var(--mono); }
   .lang-chip{ background: var(--accent-dim); color: var(--accent); border-radius:20px; padding:2px 9px; font-size:10.5px; font-weight:600; }
-  .vocab-chip{ background: rgba(15,122,109,0.12); color: var(--accent2); border-radius:20px; padding:2px 9px; font-size:10.5px; font-weight:600; }
   .empty-note{ padding: 22px; text-align:center; color: var(--text-faint); font-size:12.5px; line-height:1.6; }
 
   .block-row{ display:flex; gap:8px; padding:9px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px; }
@@ -145,8 +143,6 @@
   .vocab-box{ background: var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; padding:10px; margin-bottom:10px; }
   .vocab-box .vocab-toprow{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .vocab-box .vocab-toprow label{ font-size:12px; color: var(--text-dim); font-weight:500; }
-  .vocab-level-row{ display:flex; align-items:center; gap:8px; }
-  .vocab-level-row select{ flex:1; }
   .vocab-note{ font-size:10.5px; color: var(--text-faint); line-height:1.5; margin-top:6px; }
   .slot-footer{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
   .slot-remove{ background:none; border:none; color: var(--text-faint); font-size:11px; cursor:pointer; font-family: var(--mono); }
@@ -268,7 +264,7 @@
         <div class="job-list" id="jobList"></div>
         <div class="log" id="log">대기 중...</div>
         <div class="results" id="results"></div>
-        <div class="note">구글 번역 비공식 무료 엔드포인트(translate.googleapis.com)를 브라우저에서 직접 호출합니다. 요청량이 많으면 일시적으로 지연·차단될 수 있습니다. 단어장 기능은 원문 언어가 영어·스페인어·러시아어일 때 지원되며, 등급은 오픈 자막 빈도 데이터를 기반으로 한 근사치입니다 (공인 CEFR 판정 아님).</div>
+        <div class="note">구글 번역 비공식 무료 엔드포인트(translate.googleapis.com)를 브라우저에서 직접 호출합니다. 요청량이 많으면 일시적으로 지연·차단될 수 있습니다.</div>
       </div>
     </div>
 
@@ -279,31 +275,6 @@
   </div>
 </div>
 
-<script>
-const VOCAB_BANDS = {
-  en: [
-    "you the to it and that of is in what we me this he for my on have your do was no not be are don know can with but all so just there here they like get she go if right out about up at him now oh one come well her how yeah will got want think as see did good who why from let his yes when going time an okay back look us would them where were take then had or been our gonna tell really man some say hey could didn by need something has too more way down make very never only people over because little please love should mean said sorry give off am thank any two even much doing sure thing these help first into anything still find life nothing sir day god work their uh again maybe must before other wait stop call after won talk away than thought home night put great those last better everything told new things always keep long years leave does money around doesn name place ever feel guys father guy made old isn which big lot done hello nice believe girl someone fine thanks wanted kind coming house every ok through being course stay left dad enough happened came may mother wrong world bad might three today listen another understand hear remember ask own same show else kill talking found next getting care car looking son try woman went hi dead many mind wasn friend best mom hell morning trying boy together yourself job saw family real without baby room wouldn already move most seen live miss actually huh shit both heard once ready head called used idea knew hold happy door such fuck brother also pretty bit took haven yet men whole start use while since wife days guess tomorrow matter meet bring tonight everyone run wanna hard ah alone myself school gone um end saying phone play looks couldn fucking problem few friends gotta ago open anyone killed hope face until lost police excuse turn business case wants says true die heart soon each worry later year watch music hand having probably beautiful doctor sit eat thinking young second working water person part kids late stuff exactly under death minute pay crazy forget everybody kid change gave happen damn five drink far knows its whatever eyes shut aren hit taking easy times check hands minutes deal different means point inside makes asked somebody mine making body afraid sleep chance dear quite four anyway close ain party fun against word comes important set shall story number daughter least waiting hurt wish moment fight week husband girls rest married fire game nobody mr children side stand read though cut started sister supposed between child goes hours speak women behind almost truth blood able lady anymore playing gets shot reason trouble break war city walk town trust met office question brought yours welcome high wow couple half died cool free either seems power whoa bye buy telling honey tried front team answer gun boys line send news stupid bed hurry full months save sometimes become along hate food outside light needs dog country clear order em fact lord captain six hot funny black alive pick feeling living cause ahead lose king plan dinner sighs sort leaving shouldn running boss alright promise taken safe ma book sent white hour anybody small perfect lives special parents john himself perhaps sounds serious sick company ha scared uncle poor red past earth possible shoot touch sound top ass laughs cannot asking win glad control hmm human drive hair jack bitch",
-    "luck murder happens air ten daddy finally chuckles fast cold seem laughing words hospital street hang dance meeting till others catch follow sense sex lie evening master known dream write million voice sweet rather felt sign lucky somewhere bet jesus longer calling worked quiet looked less pull beat careful coffee return secret weeks weren date seeing fall given ooh fault straight takes song future gentlemen loved changed road calm wonderful mad turned drop ladies learn step absolutely early explain clean piece yesterday throw picture land feet wonder questions speaking worth darling dude giving president eye quick moving figure state strong sam none amazing ones works act needed weird law worried report goodbye missing choice happening chief wedding strange general pain kidding decided ya pass tired class officer kept wake worse busy eh mistake kiss court building finish during age ship caught marry meant sell dark watching system suppose evidence movie ride completely mouth totally birthday tv forgive born imagine information instead definitely security certainly film month lying unless train seven wear clothes michael hotel christmas attack hasn round expect sing terrible george bag history blue near broke station seriously forever david frank except thinks message entire joe table talked across rock lovely handle middle buddy paid protect using floor ran swear spend situation ring anywhere dangerous bill york army lead bought finished fair sun letter fool attention club simple interesting space test box group single sitting marriage join fear peace forgot force short normal charlie present enjoy mike crime horse ground american count area charge honor lunch miles radio idiot ball surprise paper key boat quickly gold bar fish mark tom wearing crying accident government eight fell cover certain interested deep star sea agree problems detective prison major stick offer difficult smart personal record stopped hide whether bank trip relax america public list afternoon brain fix bastard proud tea service screaming forward angry park soul fighting peter rich agent blow paul dress mary missed scene killing standing saved mm respect killer ice mess tough feels church sad cell drunk share camera within card fly ben girlfriend laugh smell broken mum honest often starting calls spent third english visit mama judge window hungry dare relationship moved prove private wall seat position lieutenant realize lt especially machine walking art pleasure bloody college french involved cry became lived impossible obviously neither accept boyfriend besides queen teacher cops sake loves carry teach apartment upset green la liked cute evil professor contact joke cop huge holy store jail likes lawyer doubt continue appreciate cat shop driving congratulations wrote village quit field james wine decision south sleeping slow laughter island glass beginning cash dying hundred whose difference plane push continues mmm singing eating north mrs tree madam gift truck putting bear board grab beer stuck magic support rules grunts partner reach wind colonel max immediately seconds thousand gives experience cheers victim upon computer christ planet promised bus henry dirty search staying dreams arrest holding suddenly usually lots shoes er jump rid yo knock owe harry grow worst river aunt patient kitchen aah fat passed final summer bob listening escape everywhere moon arms turns address ow match gasps grand yep shh nervous de choose themselves decide mate drinking press bother foot hadn blame crap drugs type rings mission named heaven picked paris race risk books further danny action allowed orders learned price arrived nick otherwise pictures fit smoke favor played notice awesome smile director guard begin spot surprised innocent narrator herself london feelings enemy battle ourselves alex dollars allow nine gay department guilty apart earlier duty jim suit bell west legs hero destroy stage bunch according chicken",
-    "bigger grunting low helping admit closed names witness upstairs arm steal jimmy kick twice cross ways sergeant indeed gas keeping energy pregnant waste helped fired favorite tony taste locked places writing adam brothers starts prince form sold silly mention build throat hole figured track ringing lock leg above hiding steve seemed breakfast engine written complete video applause however pressure fresh weapon sky stole study burn reading crowd treat roll double spirit danger cost empty level memory itself acting interest nose plans following bathroom built closer ray sarah band groans apparently excited richard losing animals flight nature raise pop client bomb neck suspect warm extra bottle van heavy mommy dogs wild ridiculous simply lee animal showed billy shooting keeps camp guns medical shame hoping whom bird majesty flowers famous asleep beauty driver keys rain awful large local deserve goddamn stone jane grace consider weekend wondering lay plenty willing pants sweetheart skin excellent asshole beach faith beg fuckin responsible military cheering opportunity common bottom german whoever cook walked papers justice hall commander drug main knife devil necessary although princess lights flying dick rose knowing clearly hat agreed johnny corner code note tommy due correct apologize language stars faster cars folks bullshit fellow several grandma shows leader leaves restaurant east shouting blind ghost cup gotten tight conversation tells lies nor pulled hanging speed stories health advice held murdered beyond rule hardly possibly inspector cousin trial emergency ought eddie somehow hearing states account spoke file understood angel tape milk powerful weapons practice manager pardon vote jake national career minister super taught robert biggest plays natural dancing copy plus martin cake freedom among breath operation chris crew challenge market meat towards bringing dropped student lied strength size breathe color monster loud photo aw nearly sight greatest games bridge dressed arrested horrible coach planning checked breaking noticed fantastic screams serve ideas investigation center older pack soldiers nonsense doc project training example trick prepared science united travel incredible grandpa paying character teeth criminal charles chinese truly honestly bro survive bobby target feed nurse fake records breathing sweetie numbers oil suicide belong whoo perfectly amy forgotten remain original papa onto concerned credit ugh invited discuss research easier view chair hurts strike roger fill condition mountain dr nowhere sheriff kim turning brown recognize heads audience jealous pretend society finding shirt comfortable meaning guest pieces dry letting began aye jeff female release ho cards pray unfortunately balls destroyed ended universe prepare opinion movies soldier wash program heat usual ticket stolen prefer aware surely male base matters lift lab command proof cream selling believed create afford sunday total dumb threw france birth created realized british noise nuts students birds social brilliant bodies tie opened ours bucks kevin mister ugly ryan focus dan opens exist followed england draw purpose letters daniel opening bullet anna lately stayed falling season ends suggest joy distance responsibility whenever issue thousands process sword shower weak fucked lonely happiness eric tiny desk pool property forced settle indistinct weight received gang bite friday disappeared interview expecting kinda surgery horses mayor babe ancient handsome thomas saturday staff lines unit fan gentleman introduce fate split recently expected add ordered slowly alarm member slept signed enter spanish garden brings brave pig model finger medicine access failed flat easily discovered based screw insane cares weather fingers san scott path soft harm style community sees basically al signal nope spare speech covered shake loose snow russian lake bright roof ohh sending paint remind pal naked post sugar heading streets damage silence doors pete ed success wet nah amount members kate manage safety returned harder fbi block showing fancy chef contract dig chest drinks dave buried brian trade journey stomach changes details thoughts divorce funeral maria football reality theory gosh ruined gate william spread outta japanese sudden coat sooner cheese larry spring page ears simon castle hidden storm cos personally artist hill exciting permission jerry expensive tickets forest barely eggs goin regret lesson lover bread andy subject legal growing ill jason mood owner caused beeping points dating loss secretary revenge santa likely rent connection assistant reasons yelling painting trees doctors rush foreign rough murderer century nights pair runs pocket farm matt bike obvious ate grew professional tim goodness parts alan university square grandfather europe genius cases ruin winter tongue memories da buying cancer clock ocean dna liar tour thief bleep lisa rights including competition smith planned emily boring victims mentioned bones plant bless warning knocking re crash bedroom lower silver groaning madame defense results toilet event complicated shape priest royal cheap romantic downstairs invite fortune tears avoid reached higher familiar telephone burning filled kelly alice airport jobs grown walter rachel giant insurance woods scare pleased period political player stops secrets laura repeat photos finds statement suck younger china humans delicious particular proper rome belongs attacked bath hired site knowledge led guests celebrate map horn eventually pity powers ashamed assume glasses rise fixed request officers pounds data carefully per depends jury waited positive attorney direction families doin forces location walls useless grant saving speaks fought meal deliver answers changing temple scary millions offered regular carrying official jacket switch grave chase role odd sexy faces becomes closes badly tall confused affair television shock raised panting pizza image clears golden patients watched committed sexual suffer arthur wherever plate appear chocolate clever hm mercy shots lucy dealing trap charges phil bang poison butt drove yourselves headed babies yellow soup mystery picking sat wound traffic courage hunt indian rat terms italian emma checking disease managed winner council appointment monday crack threat jenny physical nation source chose healthy carl victory rick stood kicked annie disgusting palace below shopping neighborhood march lips midnight piss advantage pure india aside jerk mail dawn effect spell freak wood screwed enemies gary awake chuckling vacation violence leo grandmother modern luke firm prime heh touched talent whore piano license cooking honour concern moves available factory gods value central union mirror studio media taxi dies iron hearts desire rob claire fred songs washington monkey pride pills miracle swim burned smells joking christian bleeding hook beating protection treatment ear carter metal disappear grateful extremely treasure rescue capable passing chatter result suffering sisters laid governor guards louis text literally remove becoming performance stronger rate deeply scream desert vehicle illegal pulling throwing josh unbelievable ted zero dean curious sean candy bone tied edge load susan ahh mountains boom former holiday riding scoffs hundreds motherfucker sue bags stealing appears arrive remains decent issues tip fail bride pissed penny claim friendship desperate flower dramatic refuse solve theme loving properly dragon mostly chuck directly surface false cast junior hunting silent thou egg germany punch africa woke intelligence borrow winning falls popular escaped witch convinced warn announcer champagne dust kyle someday fallen stranger presence tear internet monsieur therefore technology tires toast wise clark americans notes smoking hank ls april wolf precious rooms coast treated material released uniform hated considered rice exchange steps blake convince beast cow files signs drag cab hung carried ordinary successful eve mistakes houses chattering brains japan creature fourth separate cleaning california lf ll shift elizabeth chicago exact karen goal expert served direct score row marks twenty receive series section pilot jackson darkness thy sale destiny cure spoken armed rare helen grade juice wide tower solution schedule explosion wheel cigarette julie fruit blew victor talks sacrifice range button reports prisoner pie effort youth pot eaten taylor knees garage parking ambulance staring chances circumstances sin gordon progress unusual county stairs campaign vision reporter equipment moments joey mass alien trapped helps route defend trace nasty tests magazine rocks dump rude searching clue connected amen pushed merry zone senior closing freeze emperor incident snake mexico lily actor newspaper sentence greg leading friendly jones chosen engaged julia charming mustn anger spending learning spy sharp shadow warrant elevator kingdom ricky jamie squad shoulder wave amanda highness kinds fishing sometime attitude sucks negative screen workers bored cameras similar",
-    "understanding beeps chain bull gasping fully robin collect gorgeous morgan passion writer empire international curse hire bastards puts leads id blows sons estate customers maggie gunshot device troops hug design movement thunder object loser pen sobbing politics despite alcohol climb clients conference provide marty seek witnesses earn trash valley fashion howard episode prize previously sports wanting debt wishes hitler wire thee circle approach stock facts remembered percent normally tail joined education bravo library rape wings growling thrown tank exhales authority current failure nightmare hitting glory knocked studying barry agency apple border rope duck reputation confidence yard beloved lack actual skills films mental salt flesh anne secure highly federal sand emotional setting nothin senator services robbery hates fed reward theater johnson commit patrick entirely extraordinary ships opposite parties stands terry chat events mummy bay slip disappointed settled begins andrew alert detail pink fellas accepted background garbage panic minds belt blowing hollywood agreement jackie pushing ability tiger whispering culture saint jesse task solid doll intend district pa gee custody ignore naturally useful attempt abandoned cutting kissed guarantee barking gather policy violent maid embarrassing childhood wasting bow chick sara disaster revolution online demon heavily coincidence perform thin terrific mac crown identity virgin impressive windows potential guitar committee dozen delivery advance quietly stan teaching hunter latest hurting swing capital counting drew dirt whistle marie hits doug deny urgent threatened behavior molly mixed stays assure subtitles explanation wins unique chasing billion duke production slave agents carol lets cruel mask sally behave bury massive pathetic species approaching jo loan struggle dish trusted jumped firing channel abby stopping asks jean swimming daily basement linda quarter erm bound navy article guide accused transfer guts quality fella roman greater damned couch cheer vegas shoe title shy punishment los clicks closet fever coward flash impressed bruce siren prisoners sides bowl katie supply sensitive hopefully rolling roy dollar tone voices cheating confess demand museum unknown drama suspicious adult todd frightened warned steady kills crossed lou particularly sandwich laws joint bullets package trained thursday boots possibility albert civil june germans baseball express miserable tuesday parker lion joseph refused shine assault hong jokes breaks argue trail option recall mighty collection oliver wilson accent believes decisions embarrassed mobile customer terribly sec charity considering pussy donna protecting flag kidnapped italy balance creatures nuclear wallet shout vincent entered impression angela jay degrees favour reaction network jessica version concert gear singer diamond defeat steven lane blast wounded anytime partners ages charlotte ceremony league bars orange specific conditions plastic crisis fifth term self offering bud suffered reported commissioner rip mysterious entrance messed tunnel designed neighbor aboard sweat justin ghosts crimes costs deserves dreaming bust el teddy kong messages enjoying afterwards comfort mason surrender gym kitty crush yup arranged suits pee stress cave wing jordan arrange comrade noble tricks betty launch legend mix golf imagination fox kissing butter tax gross edward texas insist marcus classic selfish skull frankie shown bat survived print champion bills therapy lifetime throughout nathan toward sauce experiment margaret describe ross grass cheat attend homework lewis betrayed servant cap tyler bible practically catherine steel wipe burns generation cabin financial industry bond sheep scientists beaten heck deck fans script brand degree painful coughing religion cats stephen influence fuel drawing rabbit exercise attractive touching virus realise torture blessed plain rebecca recent barbara footsteps sacred removed pretending wasted jewish goodnight robot crystal confirm lad mile division scratch reminds walks ending russia contest valuable distant dumped motion electricity centre murders tina jeremy seal standard ellen wore surrounded struck inform gentle status purse prints players charged begging delivered kenny buck nina construction confirmed confession trigger cells frankly ali exit response cancel argument principal turkey lucas clinic greetings neighbors vice toy hannah everyday generous gain idiots holly enjoyed jungle link underground smiling mistress teams product beef whispers religious presents identify chip chffffff surveillance carlos vampire routine uses michelle underneath systems temperature waves tribe brad deputy sophie headquarters equal phones ken reckon related incredibly chill spit tracks oscar makeup bug sounded spirits nerve divorced stake port doorbell worries nephew miller units proceed landing traitor outfit chloe bail fields patience recording foolish loaded tokyo davis costume wayne injured somethin ian pet cage digging spain seats awkward cleaned pattern filthy visiting jews answering concentrate someplace citizens aim nancy affairs thick sport basic electric pleasant cliff nail russell environment western average ease raped interrupt judy satisfied beep starving documents anniversary beth election warrior forth fetch banks placed timing stones complex frozen replace prayer skip angeles guilt tune woo actions conscience officially martha machines smaller determined blown hail unhappy booth pour berlin cleared packed wrap randy behalf reasonable trunk homes festival tradition cigarettes le beside harvey motive beings bishop dealer defendant backup wounds ouch ann nearby drank effects jonathan dennis benefit adventure territory ve apology dylan unlike owns boxes thus clay developed busted pipe gray goods favourite salad loyal atmosphere eva freaking dropping strangers mouse downtown francisco heroes pit rotten paradise meantime jess organization hills exam cock fairy earl comment activity frame knight testing habit shelter flow jennifer holes prevent anthony lend cooper figures boston sample strip landed buzzing monk slightly produce annoying judgment laundry ron lousy souls existence belly tries foster returning answered ward plants actress chairman individual hopes tattoo fence sink punk confident yay mistaken limit bothering st uncomfortable wednesday gifts policeman na precisely lawyers greek merely criminals underwear hoped earned reveal appeared derek heavens personality batman virginia wives colour worker pope instructions intelligent worrying vince comin cried traveling bells impact robbed relief host footage odds patrol circus mud captured lessons occasion sets pulse ad invented diamonds matthew auntie cloud francis angels hers classes signature complain blah monitor options claims flies pat britain hid wailing listened countries vic yell rats wondered smooth resist companies fantasy passport pitch hammer homicide casey holds flew jacob noon helicopter dishes spin charm slap apply fools screeching discover previous kit authorities moaning photograph sales fifty mickey beneath farewell clouds slipped represent deaf facing offense citizen clown snap messing hood twelve interests cheated liz informed humanity producer technically accounts extreme gettin cia ii pays profile oxygen jeez gene shed minor ex theatre scientific lovers chaos rocket math stubborn august oi chips intense grey talkin terrorist angle invitation gus gambling respond thirty procedure absolute investigate tragedy stable session capture marrying ripped attacks stretch bush dates unable gates mars artists increase tastes cared bottles highest whirring meanwhile nate grabbed pigs chop olivia wheels shocked reverend commercial escort engagement corpse louise worthy scale beats williams threatening exists academy acts hop judges furniture shared ralph consequences engineer schools softly bombs caroline shark transport population succeed creepy sneak studies destruction keith protected monsters joining punished lightning malcolm shell fascinating chamber ethan romance instance jumping groups exhausted testify studied walker pin imagined drill investigating ye experienced elena necklace loyalty junk cole cries stanley rita southern blocks emotions begun maya liver serving matches surgeon granted jazz july supplies deeper typical kicking obey dancer remote daughters moron latin teachers toby sandy dragged strategy parent jin album compared rubbish helpful powder sync bum passes joan fort choices alley supper penis alibi sammy pole coke scientist fighter highway blade alpha diet liquor jet widow liberty philip moral carrie award grief thirsty ashley random suspects intention julian active tools driven trauma headache safely alexander knee lads novel conversations waters lookin invisible internal peaceful humming washed drives talented li aid elephant troubles core serial painted divine jam goat opera thieves guessing objection whiskey florida resistance dressing attached aaron brief punish eternal lois required victoria fabulous twins characters cooked ln ruth dreamed arts naughty stabbed tend diane tap soap locker development images prick global string bitter sharing corn craig fits tent forms votes harold propose monica constantly granny nicely nerves arguing abuse relatives survival gloves tracking zoe bend review connect separated elder beard admiral diana salary areas disturb pro maintain solved wealth bitches possession sang gimme plates shoulders burnt recorded upper counts tale profit colleague warehouse hostage shore porn miami fifteen visitors bo net insult owen cities causing lemon heal banging honeymoon appeal marshall critical creating scotland crane enormous testimony praise fights indians commission growls nicole sins fraud branch happily bout covering occurred beans raw muscle pages tense relationships management assignment blonde catching exposed canada dont han von comedy marco stroke whistling buildings shaking facility appropriate remarkable transferred drawn tits clicking symbol motor employees ambassador mothers pile feeding soda checks bears cookies slut awfully stepped toys levels differently magnificent steak tube leaders superior herr pan expression currently throne deadly bee tooth depressed potatoes wicked resources native centuries karl poetry multiple cable shortly buzz socks fingerprints goddess chin anxious september colors basketball promises explained appearance musical sends slide aii shawn ultimate pork communication payment structure paperwork obsessed lazy russians actors squeeze magical colleagues admire madness roads entry injury burden racing manner freezing bits norman mount battery dessert pound visited motel rumbling cinema fond halfway rifle reception statue fridge brick abandon lap natalie wars recommend brush nelson pill concept delay quarters korea janet rub mall soil complaint sail baker coughs bucket description badge measure hip function",
-    "indistinctly harris foundation labor willie waiter homeless proved unfortunate log meetings giggles combat poem polish handed mia weed raymond tons satellite jersey eagle privacy chapter treating wisdom flip entering barn farmer clan budget pub temporary effective sonny wendy juan lamb plot riley proposal sticks searched blessing rage bothered sydney basis manners recover twist neil leak item catholic sighing retired kings inner cents affect forbidden patch drops necessarily provided meters booked returns gloria fires humor torn rocky introduced creative betray soviet various added discovery cowboy suspected suggested delighted sticking dive shane radar prosecutor amber vast quinn owned cookie finest felix pump valentine counter sorts coin warren slaves marine illness sack bid require moscow largest washing achieve causes mo dope nest palm logan constant boo medication gravity booze noah evan abroad christine rising analysis cuts eats employee vodka damaged solar height pops yards terrified suitcase chemical preparing advanced fund wears chirping web phase prom suggesting fleet lame irish editor october assumed whip mel region amongst temper discussion engines operate sunshine acted undercover horror tested smash contrary roses poker wrapped korean graham mi fu ivan focused liam tragic carla demons rounds entertainment gathered uhh yells lincoln crossing blanket nut travis pockets limited paintings sober caesar sis intended niece computers tennis needle chicks traditional delicate independent leslie lauren grandson repair brandon executive colin recognized holmes regarding weakness aliens gunshots european method tool demands permit towel daisy nowadays spider northern rangers zoo praying antonio passengers con australia technique cellphone gently operations planes bunny gunfire shining backwards skill baron kidnapping iike marshal petty sealed massage raising menu diary fucker wagon audition mitch mexican casino bacon diego dutch promotion click forgiveness burst permanent interfere chanting dammit spencer recovered registered sunny packing scenes superman questioning unfair admitted ancestors polite completed swallow conduct prayers sheet fried avenue poisoned reverse newspapers ford complaining senses investment absurd potato understands grows inspired ruby celebrating tag ram requires bonnie bugs leonard elliot hooked jill ranch safer worn crashing lands heather ash leather grounds assuming nails dana conspiracy thanksgiving pierre guardian rumors yen megan ashes terror misunderstanding tire boats parade halt immunity adults steam kang closely pearl soccer adrian priority shouts donald happier khan struggling root larger november boot conflict laughed debbie cherry honking concerns celebration sore unconscious cattle breasts fairly fee recognise wade radiation holidays raining forgetting lungs register shadows specifically sarge ideal turtle spoil deserved ronnie gina candidate lance types bloke explode immediate belonged identified di hunger closest combination nanny seth gabriel develop detectives severe en organized franklin gut splendid dismissed pm yang halloween ellie vulnerable continued vital comrades bureau drawer harper retreat carson benny pillow troy ace cart nap chan ham announce borrowed parked galaxy voted muffled sebastian jewelry kisses luggage groom oops lighter masters alliance buddies clothing denied drown alike excellency relative photographs burger dough alicia wreck approve produced christina physically stations eli samantha spiritual sire roaring stab inch servants limits unexpected arrival whimpering basket sheets scandal stink homer tara christopher toes shield shooter instant objects rehearsal disturbing directed scan electronic republic overnight counsel sirens dorothy bait dignity explains lean heroin tracy rex barney gossip humble economy worlds impress clara tissue threaten et bump supreme bingo mitchell excitement mankind document broad vietnam vessel lit dale killers connor mario foul stare deaths hut elements coma laying coffin paula cocaine puppy louder handled announcement oath mob cotton deposit taxes injuries jen autopsy advise gig lecture posted skinny lo include revealed infected relieved assistance solo determine terrorists elsewhere lamp practical marked adorable rubber purple operating suite apologies personnel beam poet samples arrow counselor carpet allen audrey spotted floating corrected located journalist insisted operator rely singh fooled arrives leon walt eastern ay shave remaining toss anderson lip acid nora si december anonymous inn planted oldest breast sixth error reporting egypt islands jules roommate sings scum visitor giggling described geez inches commitment hercules react cows protest misery theft embrace darn harsh andrea communicate fathers faithful hector flame medal silk photographer trevor cemetery rear freddy banana allison emotion chap dated excuses shitty bin jew gum crushed efforts content corporal realised del rap hopeless debate era luckily ton liquid swell peggy feast murphy attracted application profession bench vanessa ahem symptoms scout crashed keen aircraft formed hon aggressive pale significant duncan clubs visual embassy defence cabinet display fame gibbs drowned wolves filming dunno cursed twin sorrow vault defeated watson quote penalty bargain pepper speaker compare satan helmet scar copies fuss envelope perry stinks african arrangements wished honored believing discussed assigned rosa oven jenna attacking tin sonic collar mere romeo belief storage rusty psycho climbing melissa fears sum dedicated ladder alternative raid dining ms corporate folk jon replaced bailey un heels duties smarter existed surprising chess requested cruise primary rhythm drum models motorcycle adopted barrel cargo planets shove wha surprises rosie dings trailer cannon tables arse ally lawrence wee tapes dull sandra teenage kent cooperate risks dug worthless arriving kindness ties items grip relations rumor skirt frog paige lloyd claimed perfume instrumental flames association loses january spike israel eleven gallery ginger activities iraq boarding fist stuffed improve creation connie infection strikes wiped tension whistles kindly certificate curtis bold threats claudia sid twisted suspended affected envy whale dial cameron martial controlled lung nigga coal upside imperial pam paranoid signing congress villa candles filling becky comic faint recovery volunteer tech bleed positions cindy narrow forbid stuart perspective faced neat pierce observe cycle psychic handling goose accidentally conclusion designer sits importance spots francs sweep destroying communist blackmail pacific risky glorious filed hatred cam deals pos fooling persons scotch executed brakes blank tender kurt turner tub sucker slight addition campus ritual prey graduate anyways ew fry genuine ned judging doubts warden ceiling practicing somewhat established attempted zombie generations yöu gathering warriors mick electrical collins sobs couples depend institute miranda principle fixing therapist compete compliment worship residence democracy joel published myth helpless screwing kennedy execution appetite formal strictly sucked tanks chickens gwen technical stella rod meets shepherd brazil brutal alison vain switched chi deer brooklyn dresses retire overcome inspiration cunt benjamin nicky thrilled tae"
-  ],
-  es: [
-    "de que no la el es en lo un por qué me una los se te con para está mi pero sí si bien eso su las yo del como aquí tu al más le esto todo ya estoy ahora muy ha esta así vamos algo hay bueno tengo él cuando estás sé tú nos nada cómo este he ser tiene puedo ella quiero hacer fue gracias vez era soy sólo todos porque son tienes creo voy sabes estaba puede eres ese usted entonces hola solo verdad casa tan quién sus tiempo dos esa nunca dónde va oh favor mucho mí quieres siento señor mejor hace has decir también sobre dios sin tenemos están ti puedes ver hombre vida alguien cosas siempre hasta ahí ir años antes estar ni poco día uno noche hecho mis estamos otra acuerdo trabajo nosotros parece gente sea padre mira mismo dijo nadie quiere podría hablar vas ellos tal pasa fuera después han desde dinero mundo claro momento les tener estado otro había mañana tenía madre vale lugar haciendo donde seguro sabe podemos tus espera nuevo sido cosa hijo allí menos tipo amigo gran nuestro mujer mamá luego papá días dice hoy tres buena necesito dije oye gusta quería será haber parte todas crees buen conmigo nombre mierda nuestra mal debe realmente estas aún mío toda hacerlo cada visto importa contigo tienen hemos razón alguna tanto saber hizo veces serio ven idea eh tarde problema hora cierto dicho quien demasiado amor entre ve pasado familia estos policía debería ustedes chica esos chicos cuenta haces todavía salir algún vaya unos veo amigos hermano pensé sabía cabeza ah cariño digo van hombres buenas somos cualquier forma mientras lado debo sería caso pueden pasó primera genial chico supuesto hice pues adiós muchas personas señora volver esas quizá contra camino durante hablando manera muerto persona rápido cuál ayuda historia iba supongo nueva entiendo dentro casi puerta ves pasar primero significa semana hacia quizás espero juntos año niños pronto tío suerte ciudad siquiera feliz venir hija gustaría minutos cuánto os hey muerte dejar realidad deja problemas vi da importante dijiste corazón miedo jefe agua haré justo horas poder buenos esposa manos debes viene venga nuestros ojos adelante encontrar mano cinco niño ninguna otros cara cuidado bajo cerca viejo déjame noches bastante fin tomar único misma escucha ningún suficiente punto cuándo sigue haya equipo grande necesita llegar incluso algunos doctor difícil aunque hubiera primer coche hago clase cuatro mas dices pequeño llama toma hiciste allá última arriba tierra guerra pensar pueda igual loco sangre mujeres vuelta fui trabajar tenido juego deberías cuerpo algunas entrar cree podía debemos oportunidad teléfono necesitamos final listo fiesta muchos estabas quieren vete auto dar vivir posible ok hermana número meses exactamente culpa abajo escuela ido fuerte diciendo habla esté ello pregunta chicas eran unas pasando atrás malo capitán bebé segundo sabemos mayor comida morir conozco dame fácil comer vino lista haga necesitas hijos probablemente padres habitación creer pensando fueron dime trata buscando tuve tampoco amo joven podrías sola par única hacen seguir simplemente dicen medio puta saben sentido hagas segura esperar lejos arma alto pequeña dólares seis estaban seguridad maldita estuvo preocupes palabra esperando queda oficina matar iré cama además último oído habría estará dio recuerdo siendo acerca tenga luz correcto demonios nuestras verte dormir sitio ayudar conseguir di marido paz idiota plan dado cuanto peor murió pueblo vivo venido john basta paso deberíamos música diga minuto anoche llamar piensa país digas rey perdón mucha falta pienso diablos perdido niña señorita diez lleva hospital grandes maldito otras llamado hacemos llevar fuego aqui tuvo poner calle acaba",
-    "prueba increíble real libro orden semanas especial mía café duro empezar afuera queremos perro cielo jack puesto viaje detrás cuarto querida haría preguntas piensas querido libre buscar cual diré suena jugar cambio película millones habrá llamada resto vemos extraño mala presidente irme ropa perder vuelve agente palabras información raro hará entiendes éste trabajando tratando general trato usar perfecto derecho modo ayer conoces demás quieras podríamos noticias asesino encontrado control odio frente sexo decirle estaré divertido armas recuerdas amiga grupo asunto acabo mensaje encima atención diferente uh cállate daño sucede cambiar siguiente sino the seas médico boca dejó error jamás largo pena voz futuro siente secreto baño mil decirte sam pensaba novia propia sueño haz fuerza deben supone estábamos ambos ay estuve encontré vuelto dolor dile encanta edad darle pie negro ganar york aire lamento verlo asesinato vio adónde llegado disculpe cita estaría fuiste sistema gusto pobre negocio mente tuyo campo mire situación tras hotel vosotros funciona foto abogado loca propio alrededor próxima terminado hablas pagar mató llamo personal sientes ocurre ésta recuerda mitad quiera pelo tenías viste oficial llegó compañía relación conoce pase montón mejores creí cena sentir través accidente ellas caja tranquilo bonito eras asi pudo vive vista estúpido línea caballeros haremos dan quédate tienda comprar entendido centro salvo mes joe sol tonto hambre michael mesa respuesta completamente david carta totalmente imposible pruebas novio normal gustan frank pude charlie traje dirección siete dijeron placer sean tendrá barco blanco tom profesor servicio muchacho reunión dejado ley quisiera hubo george programa carrera cumpleaños muchachos culo canción hermosa universidad boda decirme cualquiera tengas hacía estés sala llevo decisión espere don necesario sal entra prisa carajo embargo interesante tendrás escuchar abuela hicieron detective horrible suelo fotos cárcel acá io mike siéntate decía intentando vámonos maldición silencio muerta capaz salió club terminar temo broma gobierno prometo cámara media terrible llamó regalo amable dulce muertos querías ataque das navidad negocios pudiera ocho avión investigación acabó juro mantener ejército papel partes ten gracioso diría principio delante teniente deseo vayas nave sale basura vine contacto esposo tren encontramos dale verdadero tuya alma hazlo disculpa junto anda tendré matrimonio saberlo locura oro permiso director peligro libertad alegro baja tendremos derecha encuentra pies segunda maravilloso espacio rato abuelo esperaba mirando salud sorpresa ninguno miren triste aun pensado maestro según infierno podrían tipos tía crimen conocido consejo ante iglesia intento mayoría doy peter hicimos escena piso señal honor llamas abre cerebro veras viendo pone pregunto cocina vestido inteligente vieja caballo vienen vidas bar corte sucedió adentro drogas enseguida busca agradable carne parecía departamento lindo mar duda edificio conocer cargo víctima luna energía frío hablo baile trabaja misión listos ayudarte izquierda paul beber deje finalmente simple daré sabías puedas puso creía regresar llega entender mirar sacar cambiado trae hermoso opinión verás linda apenas segundos cerveza harás estuviera creen oír tendría cuántos hablado hablamos reina temprano tema prisión porqué vuelva público ocurrió veré salvar partido bonita joder causa caliente sargento cenar compañero llevó banco existe ben zona destino base solía cliente irse perra james encuentro encontró pelea san norte quise coronel apuesto peligroso viva max vienes necesitan té excepto juicio podamos llave equivocado posición trasero irnos espalda excelente éxito modos ventana veamos especie teníamos diferencia formas pedir últimos escúchame ejemplo ése radio lee calma hogar volveré fondo humano henry tí iremos unidos habían jesús planeta verme respecto regreso debido seré tenían leer parar lleno dejé respeto debajo harry escribir estación pidió alta pista estrella enfermo duele sueños veremos miles darme órdenes ocupado sigues corre podido dejes nivel habéis experiencia darte salida decirlo confiar hacerte necesitaba hermanos zapatos color vistazo nena tratar parecer",
-    "juez próximo paciente hayas bolsa arte mary jugando llevas alegra bailar diablo oí sepa estarás sur banda aprender precio completo santo culpable ganas tuvimos you verla volvió libros ojo serán cielos matado azul diferentes irte ia comandante acción reglas obra esperanza cuestión molesta teniendo bill informe jimmy río bienvenido abrir tocar bob contar sigo interior apartamento vea estados estáis preocupa tomó principal empieza londres empezó vayan jim llaman ojalá perdona vuelvo golpe quedarme llamaré acabado estilo nueve definitivamente quedar cartas bomba guardia pistola probar majestad traer marcha pareces común aquel hacerle vuelo nota danny humanos estaremos valor suyo objetivo repente debía rojo bromeando irá entrada doble dejaré evitar máquina cuello conocí tiempos tome nick animales alex acaso tuviera pareja verano escuché ama serás mentira tarjeta hagan perdí correr steve traído llegue preparado haberlo tony usa intentar ayudarme flores dando vos opción isla cierra piel enemigo dejo exacto imbécil jóvenes pedido larga entiende justicia nuevos obviamente despierta pido calor luces refiero fuimos batalla déjalo intenta sarah fantástico brazo absolutamente llena hacerme salga recordar escapar bosque gay señores quedan piernas visita parís usando ganado movimiento blanca rico inocente pesar absoluto vacaciones um mismos tomado habías planes cine toca brillante confianza vuestra nombres especialmente fbi embarazada esperen pantalones defensa terminó salido estupendo jane presión inmediatamente testigo deberían olvidado soldados resulta tommy depende motivo inglés suya estudio acabar sentimientos tomando dieron parecen llaves perros propósito noticia partir vuestro metros santa quedarse clientes podrá cuántas ridículo damas estuviste tranquila operación come empresa ayúdame laboratorio elección menudo beso copa conversación brazos espíritu dejas cansado interesa refieres casado enorme asuntos fe muestra trampa ray billy memoria johnny contrario soldado subir turno encantaría preocupado restaurante saliendo escrito cálmate bienvenida caer llevaré leche estrellas prefiero red viejos solamente oiga estén cuentas taxi anillo richard preguntar victoria quiénes héroe pequeños decidido películas responsable trago volverá árbol ibas dientes encantado camión vender llame detente luchar cabo ruido lucha muere reloj gato averiguar volar vayamos tanta vendrá corriendo yendo colegio sonido caballero pasada código hagamos imagen riesgo llegamos alguno pan millón malas dama hielo coño cayó prensa querer vengan eddie caminar televisión pasará momentos coger posibilidad hubiese mark asiento tuviste herido maría seguramente proyecto pared sentí sospechoso naturaleza ésa silla perdió robert policías arreglar sentado papi ideas obtener felices señoría cantidad bebe mírame chris papa llorar quedó familiar desastre locos escuche quedarte política pedí sois nosotras will enfermedad encontraron colega príncipe verde bajar nervioso vengo inspector sirve puertas fuerzas playa cantar déjeme velocidad total cabello suficientemente huellas haberte debí unidad estan cuchillo oigan quienes gana tonterías emergencia perfecta hable gustaba lugares ryan show robo permite parque roto serie puse nuevas evidencia conocerte estúpida preocupe perdone botella viento mando extraña historias aquella tenéis solos apoyo bala verdadera tiro época puente olvídalo distancia desea dejarlo pelear pierna echar descanso américa área orgulloso datos espectáculo sube dejaste acabas verá magia nacional universo llevaba necesitar nariz aquellos clases jake casas vergüenza estarán monstruo princesa autobús cuidar ei huevos pocos podrás enferma paseo detalles llamadas belleza francia abierto viviendo envió puntos ministro conducir aceptar borracho animal caballos trajo contrato viernes bobby martin amy bienvenidos ex hechos sociedad tengan quede inglaterra carga diste puto lleve presente conocía uso dedos oferta sentía proteger daniel date hiciera hablé recibir agradezco robar enamorado sepas oeste herida despacio ayude supe directamente inmediato profesional oscuro mercado cerdo tardes líder grave llegué jurado casos acuerdas ahi desaparecido debió hubieras últimamente piedra éramos habló charles paga secretos digamos intención humor dura dará seguros leo adam and ángeles querría cerrar conseguido peso víctimas asesinado humana directo central termina compañeros escuchado contento llevan podré oscuridad actuar siga llevado comenzó regresa privado mirada demonio abierta kevin llámame siguen romper cambia fiscal jardín natural gratis cuesta amenaza pon marca comenzar ponte medicina podremos tomé preciosa sexual acceso necesidad dueño merece rayos mintiendo tantas imagino fantasma creerlo llamé ponga brian dé pollo varios efecto felicidad espada relaciones entró resultado sombrero menor recibido negra to habido limpio china juegos correo confía video perfectamente harán teatro dormido local quedado lástima calles créeme responsabilidad búsqueda dedo tonta recuerdos razones escuchando eric elegir amas huele almuerzo cien adn tantos pago normalmente mr pastel bastardo cinta pasé dígame anna costa levántate llamando cerrado interés enfermera comienzo olvidé fuese militar polvo bella quedo kate encontraste voluntad varias teoría roja cuento escenario diario propiedad agujero aspecto campamento descansar matarme metido quiso ángel enviar impresionante proceso intentado mio fuente alcalde ocurrido malos carretera desapareció desayuno débil roma sabido comienza tambien intentarlo miembro perdiendo hayan fueras resultados jerry mata sr valiente deber pecho gustó oyes thomas periódico mami piensan washington tv cansada limpiar crear explicar robado resolver maté guapo continuar sheriff funcionar extra primo manejar primeros acto poniendo números kilómetros andy llevará rachel niñas premio internet harías inútil domingo tomas sensación alcohol tercera agentes disculpas antiguo guapa asustado puedan sexy genio recuperar creemos lengua ladrón intenté examen deprisa montaña durmiendo disparar entrenador queso entero papeles pones modelo fútbol detener lados miembros sábado pongo mataron vuelvas talento descubrir gordo tribunal toque wow hables conocemos haberme dispuesto tamaño dejen maravillosa invitado importantes derechos scott declaración claramente pacientes pérdida in iban pudiste profundo gas aeropuerto consigue olvidar gloria olvides volviendo coge fué llamaba pete tendrán instituto disparo encuentras querían hablemos dia enviado pertenece sienta pensó cadáver gracia doctora escuchen amante temporada kim cuerpos amigas larry preguntaba francés mataste techo íbamos protección médicos lisa venganza pensamos walter contó discutir comprendo idiotas enemigos camisa superior criminal preocupada bote escribió llevamos testigos recoger emily truco jason original pide jeff rosa mama negros sobrevivir rostro crédito compartir saca irás pequeñas veía empezando registro continúa grandioso viniste esquina contado tengamos cientos tormenta relájate siéntese chocolate matt pedazo tomo olor ciencia kelly conexión vieron salón sucio firma vimos pidiendo casarse bebida tercer propios fuertes lluvia recién tomaré complicado europa toques cámaras visión llego americano diversión pareció libras curso disco probable precioso tenia lago leído consiguió parecido material discurso entera it corta completa decirles lunes efectivo cura antigua hablan juntas william cáncer funeral jodido dave artista favorito guste cae termine entrevista sir pintura quieto falso india corto inteligencia destruir cargos podías mentiras señoras helado felicidades camioneta mueve aparte rock tumba seguimos hablaba verle mapa tarea cambió móvil equivocada responder vacío felicitaciones computadora estudiante muriendo construir conocen clara solución mundial plato famoso des dirá ambas tecnología notas malditos cabrón condiciones dudo robó escucho laura rápidamente bordo nieve mensajes fecha violencia sujeto acciones fría droga saldrá suponía empezamos errores grace siglo molesto acabamos sabéis cortar seria muevas fortuna of imaginar archivos presencia familias ey quedas solas oficiales aventura gira social comunidad annie alan cero clark esperamos ocupada muévete convertido carl pieza estómago disparó legal conseguí emma carter california rara estudiantes reino alegría barrio granja podéis esfuerzo trabajaba claire perdóname tesoro empleo compré cirugía dejamos busco trabajas clave aparentemente bravo ed desearía cerrada new chicago controlar pregunté mostrar piloto pocas tuvieron ayudarle bolso llorando kyle duerme dejarme intentó respirar aparece campaña amistad corriente viven huesos invitados planta ritmo respuestas socio esperas caído motor mono llevaron página poquito habíamos encontraremos ruego dejan aburrido paquete casada llevarte ted combate útil castillo bola canciones mataré muchísimo asistente llegaron correcta pondré simon comido salgan empecé tirar pasan cierta honesto carro limpia volví confío venta huir apareció vais compromiso gustas aseguro ira promesa decírselo cuáles compras importancia lección hablaré hacerse personalmente roger luke bolsillo enojado desgracia artículo labios cola estemos whisky taza despues gary preguntarte pelota caminando andar crea chaqueta importaría den llegará interesado atrapado supiera matarlo árboles obvio amaba hablaremos entrenamiento pescado últimas pobres dioses nerviosa vueltas encontrarlo autos alice preguntarle lucy abrigo okay estudiar sonrisa cobarde olvida secundaria descubierto convirtió coches venía josh charla vives bruja celular rose rompió andando vean conseguiste susan veinte encargo matarte palacio convierte ja vivos pasamos firme daría piense oigo phil sorprende alemanes milagro soportar dejaron smith disculpen moda despacho",
-    "vecinos vaso dejarte explosión poderes regla acaban copia siguiendo viajar cadena fábrica mantiene meter contenta comiendo educación maneras fumar encantador cuantos homicidio madera mayores grado tratamiento blancos lord anterior comisario pizza millas tira fueran cumplir plata quedará quedaré aléjate decidir lío preguntó agencia humanidad usado guardias parada leyes funcionó odia levanta mires respira escaleras decisiones queréis salvaje preguntando pasos ambulancia traducción trabajado básicamente tratado parado especiales mentiroso libres servicios pedirle vivía medios compra conocimiento armario lobo quedamos ciertamente permitir tráfico uniforme estuvimos alemania suave propias balas asqueroso ciento invierno consigo encuentre jenny conductor equipos arena park licencia tíos jackson dijera espejo marina matando seres fiestas mover coincidencia análisis llegando azúcar tim casar sótano volvamos sabrá taylor ocasión cheque revisar ponerme suceder acusado dímelo quedé conciencia doc pesadilla sopa saltar heridas pienses suicidio llamarme posibilidades elegido divorcio registros recibí joey escuchas mirad pierde abogados trataba americanos llevando miel regrese dilo hermanas alemán iría lady salí particular miras frontera ventaja alerta piscina regalos comportamiento julia señales salimos revista hecha imágenes llegas rápida canal paciencia sacado echo crisis asesinos oíste dejando estarías anteriormente vigilancia desierto asustada cuerda míos chuck seguido seremos morgan pene despierto gobernador sección casarme trabajos karen preparados murieron oso curiosidad hank impresión pez pasaba escuchaste torre sientas mentir pasillo juega suéltame arresto ricos sencillo ruta documentos enamorada apuesta perdida vinieron ayudarnos presento hazme leí arthur virus lárgate sigan compró servir pongas alarma identidad iguales aviso aprendido caza daba muchacha permanecer bebés opciones responde vernos julie llamaste ponerse sacó orgullo reales esperan vuelves maggie serlo cuantas enfadado ponen altura jones archivo fred ayudará fácilmente criatura saco precisamente máximo viniendo vendría louis ilegal refiere llamamos versión incendio preferiría gritar recibió concierto casualidad excusa rodillas cruz dulces zorra cómodo cruel sofá perdiste encantadora salgamos sombra ganó encantada firmar escritorio muñeca rastro gigante pájaro ducha tomamos déjenme condición recompensa doce actor actitud cuida salsa hubieran carlos personaje dudas jackie cambios votos vivido perdimos suficientes entrega comercial decidí tribu pura volveremos voto méxico amar poderoso traigo asesinatos fresco privada seamos guarda orgullosa vivimos difíciles hagámoslo jefa trató senador ayudando campeón bebiendo adorable ayudó ciego falsa jo sara bestia alteza deseos episodio celda llevarlo aguanta vengas jueves montañas pensamientos medianoche llevarme garganta sesión pensaste diles muera coma sentimos creas escribe identificación circunstancias preguntado veneno primavera súper vuestros queríamos aquello preocuparse martes feo cristo francisco howard virgen distrito decidió reputación socorro encontraré castigo dígale límite junta ponerte casados líneas estudios muévanse audiencia helen nació mato jugador hmm humo popular nación conocimos tropas sucediendo explicación salen discúlpeme presentar donna celebrar competencia envía mantén verlos biblioteca fila ésto misterio ganador puerto vehículo escapó traeré julio lograr desaparecer muero quítate favorita patio golpeó tontería miss pecado comité preparada comprado parezca emocionante caras rescate título llegaste decírtelo adivina elizabeth pánico barry quieran abby exterior pasión llegan preparar guau patrick tierras demostrar elegante asegurarme visitar asegúrate darles cabezas abra andrew dean ambiente conde urgente impuestos antonio distinto encantan ron marcas ayudarlo leyendo adecuado cajas abandonar dispara buscamos funcionando traté cia tomen darnos intentas lily gustado jamie luchando apesta volando periódicos lucas detenido curioso tetas caro asco usó buscas amanda salgo decirnos enseñó rick mírate stan debiste océano bolas nuevamente damos pagado federal cuán escalera acepto km terapia lágrimas terreno autoridad encuentran roca superficie cubierta terry hierba juan prometido crecer mental extranjero madame prometí mismas existen veas lento dirige capaces chino vuelvan meta suelta despedida sucedido pasta cristal vegas gritando pare peces brown guardar podían sabían literalmente salvó aprecio fotografía patrón esposas king desafío asombroso pedazos robin sales clínica atrapar experto medida tele desagradable custodia nacido anuncio física hollywood empezado ma fiebre johnson compañera ayudarla desgraciado organización echa mina honestamente deuda digan transporte cocinar delicioso podíamos greg dirás habilidades sentimiento pudieras golpes nadar operaciones admitir templo adios maravilla quita mate piano bombas paredes pantalla italia pusieron sally amén mac civil fantasmas gasolina sabia tyler judíos tripulación pagan arrestado extraños canta texas estando flor ricky usan cruzar esperemos guía preocuparte enseñar irán conferencia miro habitaciones galletas hablarle delito atacar objeto disparos museo ruedas recientemente huevo violación regresó sufrir tina terminamos disponible rica habilidad práctica acabe amado haberle volvemos tendrías maestra city pastillas aprendí cable nacimiento consciente alcance evento alquiler ordenador incidente huh escribí estuvieron intentaré pensamiento metió maleta condado piezas ladrones metro kilos recuerde español motivos explica renunciar actuación refugio harto reacción paliza chef ocurra marty entrado quitar amanecer molly corazones rumores llames celoso utilizar territorio olvide prácticamente disfrutar intentaba vecino pública collar golf betty marco cercano fondos ross bruce montar salvado grados dylan moto instrucciones treinta gordon adonde hablarte jesse emperador cigarrillo cuéntame do secreta haberse hitler anne mortal ronda cuídate metal puro cierre colores eva rusia botón hijas tenerlo tono espía empleados conduce detalle estuvieras oliver rusos déjala crema roy contesta casarte manda dias prisioneros echado trajiste charlotte flota marie criminales mmm platos crímenes cometido golpear igualmente dispararon dejará tontos sabría abran ayudante cultura revolución hombro botas adoro olvidó biblia saludos katie deme adultos sitios serpiente parker nathan romántico posiblemente adivinar peores buscan enfrente restos capacidad aliento placa rata áfrica entendí metas cuadro afortunado puestos japón división subtítulos entradas bicicleta vuestras pesado sugiero calla espacial st ventanas mejorar concurso comisaría sincero centavos naturalmente deseas pasara jay esperado ocurrir pondrá recursos raza muestras personales wilson imaginación volverás ceremonia almacén sabor sentarse on unión frankie reserva españa encanto aviones calidad escondido citas aceite pusiste querrá punta cinturón podrán cuales chiste consecuencias sinceramente lewis hablaste vaca investigando vuelven chloe prisionero investigar apellido actual despertar instante vincent ud morirá sacaste justin traiga sentada mueva jordan terminé emociones dormitorio pulso atreves frase partida sabíamos parezco excelencia despedido moral asalto decente informes asusta trabajan my doug poca pasaría médica combustible discusión verán ciertas pata jean antiguos requiere cogido comunicación manzana sed tio joyas cojones noble trabajamos pediste encontrarla piedras traidor gané letra conseguimos vía sacerdote efectos resistencia arroz arreglado tarjetas descubrió desconocido mínimo disparado boston entienden bandera llamarte plaza entrando tomará visitas cooper demasiada faltan planeado imperio esperaré enfadada levantar cartera jeremy importar depósito colegas periodista comprobar funcione nina mereces forense tensión involucrado vacía abandonado vídeo ruso círculo judío cole gritos carol empecemos resultó campos váyanse escribiendo divertida pasen pinta supo ascensor quedarnos matará aparecer helicóptero actuando ooh pasas apúrate big entregar escape indios limpieza rebecca querrás hueso jessica magnífico trabajadores caída temperatura habia dejaría encontrará ejercicio lealtad alas pasaron invitación diamantes unidades miller enojada decimos leyenda gilipollas tomaste paraíso gatos costumbre podria cabaña secretaria lentamente ensayo pagó familiares gimnasio negativo lenguaje pájaros presenta quedes garaje palo león oídos dick espaldas apuestas científico incluyendo pelotas actividad dragón necesite intentamos aguantar davis primeras generación sexuales apetece grupos capital dejemos habrías máquinas barato monsieur sistemas fingir pensarlo miércoles escritor solitario recibo conocerlo pudimos convertirse almas salto sonar publicidad russell temporal antecedentes probado todd kenny llamaron atractivo váyase barra aniversario intereses madres deba imagina niñera movimientos quince holmes muro recibe luce nací prima cubierto contando reír producto daños abrazo gafas arreglarlo sobrino man demanda elecciones construcción ayudaré buscado criaturas dejarla internacional perfil trozo actriz repito bendiga pistas whoa vecindario hannah marcus ataques razonable vende gerente sensible ríe izquierdo personalidad camina traes tuvieras albert conté preparando secretario rueda sorprendido profundamente conoció grano pagaré límites moneda super piedad militares seguía tocado ciudadanos creado temas acepta encerrado opinas empiezo borde llevarla barcos toby pudieron tocando harvey profesora dejame expresión asesinada escándalo nervios ios randy emoción blake catherine oficialmente perdedor margaret sienten rumbo valle ian viejas buscaba científicos gorda juventud hayamos preocupación desnudo guión grant envié señoritas carreras tratas sucia sophie ratas mayo tirado heroína háblame contestar caos alternativa estupidez derek sorprendente pedirte principios egoísta mostraré sentarme verdaderamente enhorabuena casey peligrosa ánimo viajes lujo mia cantando religión nate risas despejado miserable hierro corona wayne serías dispositivo mencionar brad mencionó inmunidad grabación producción nuclear clima puesta buscarlo carácter prostituta llamarlo steven máscara alegre comprender volviste cambiando alianza encontrarás positivo siglos serían desafortunadamente guitarra hacían estrategia entré vinimos frecuencia poli that elena discúlpame llevé vince prohibido caray arruinar masa existencia túnel bromas evitarlo industria trasera monstruos mete conseguiré inocentes colección empleado fatal stephen olivia intente expediente nancy putas jess petición ayudado lou presentación beth vendido cerebral coraje adulto rubia mandar pierdes gano almorzar caridad oscar sepan llegada capítulo disculparme viniera gastos sentirse entren quédese tarta volvería jersey mataría breve obras acero llévame street suceda cigarrillos funcionará alicia haberla camarada confesión dijimos coartada desnuda payaso rayo guay naves americana político diseño condenado convencido edward policia italiano pedro mm camiseta vendrán extrañas impacto equipaje lois sufrimiento salieron mantente sabiendo maten adolescente soltero descubrí tranquilos influencia oxígeno experimento absurdo algun habrían ponerle empiece devolver propuesta tómalo michelle abrió plantas cantante traición cementerio florida pozo patrulla brandon planeando ann tragedia ethan miami autoridades trate procedimiento fantasía billetes ganamos secuestro sabrás prestado bodas béisbol ciudades conejo pregúntale billete esperanzas díselo significado mueren shawn cincuenta jugadores web apropiado robot considerado alcanzar patatas mantenga continuación tradición países ocultar tendríamos electricidad bebidas siguió reto aldea robaron aguas caminos ellen permitido alli cima éi risa cumplido objetos decide pregunte once matan terrorista tomes términos reyes revés",
-    "explotar maletas nubes circo darse west prometiste tanque uñas encargaré terroristas estúpidos héroes salta daremos agradecido victor terror keith sacrificio destrucción teddy texto peleas liga martha ana enviaré teléfonos porno diera oscura tuyos olvido queridos colina bromeas sano únicos musical pastor ponerlo naranja batería trabajó reuniones sue figura jesucristo funcionan voces caroline jacob caramba callejón técnica marshall refería notado maquillaje lanzar cadáveres atacó vendiendo bailando tenerte cubrir liz policial fase gus joseph importaba armada fea porquería mickey superar disfruta sueldo abiertos piénsalo testimonio incómodo oyó costado apaga considerando bolsas seguiré imaginé detenerlo diana pasaporte infancia suele productos rocas reverendo mediodía golpeado destruido reconozco plástico young barba mago hojas conocerla hallar mantequilla lidiar sentencia ideal dámelo mandó residencia francamente guerrero ayudo sigamos jennifer engañar baje contaré guantes rompe conociste hoja decían recepción logrado odias comisión vampiro finales sufrido azules usarlo cometer descansa peleando docena estaríamos sera lanza averiguarlo lanzamiento moverse ho falla angela técnicamente dejara medias míralo físico hacerla multitud potencial hacías famosa rutina oportunidades progreso fascinante ensalada cómoda prepara tráeme equivocas tubo owen sacarlo is usas letras dennis demasiados éstas interrumpir representa socios pecados novela herramientas desaparece apostar septiembre vestidos festival franceses queria gustar auxilio éstos fracaso berlín cañón llegaremos empezaron spencer fíjate votar merezco infantil estacionamiento asesina sentarte mintió grita ofrecer ruth esclavos academia probarlo viuda reporte monedas rob advertencia jugo malcolm pico miré rota sociales amarillo encargado so listas as poderosa prometió drama confundido olvídate normales inconsciente asegurar estadounidense locales informado resuelto cueva conduciendo perdidos escuchó patético abril matemáticas eliminar venid hicieras causar demasiadas vigilando función solar encontrarme williams dólar trucos lectura camarero toman regresaré tiendas encontremos dimos cabina deporte virginia fuga holly sospechosos jonathan ala champán quedaba viera formar walker detectives entenderlo orejas obligado testamento extremadamente creyó darán materia detuvo casco sabremos agenda rosas aceptado bello fabuloso llores arruinado enterado junio baila artistas realizar hechizo respiración extremo historial pongan yeah próximos extraordinario tigre fianza consejos mostrarte doctores auténtico usamos romance miente matthew importan paren indio increíblemente pierdo llevaremos ví ofrece seco willie quinn sagrado monte paris discos louise carrie juguetes cerdos enteré escapado matarla casó ali salgas pasajeros debilidad civiles corbata dispuesta necesitaré cuartel cazar robando convencer rollo pescar mezcla parejas condicional giro bonitas necesites molestar amantes gris zoe pedimos refuerzos josé colgar heridos arreglo plazo harold salvajes elliot fotografías sintió hermosas ashley convertir contarle retiro francis gravedad importe lata enseñaré velas suyos símbolo reconocimiento típico ayudas regresado conducta lane ken am participar lana shane hacernos tratan vendedor federales pudiéramos diane estrés césar soltera gustará em brujas horario recuerden identificar hill alfombra perdóneme actores atractiva permítame desperté salía recibiendo preciso comprendes white altos fan papas anciano profunda petróleo intenciones francesa neil jin rango sombras malvado defender lleguemos suba jaula watson natalie comentarios dosis cartel disparen esperad cargar enviaron jodida seguí aproximadamente postre escala estudiando pavo origen considerar fiel diego embajador tatuaje población harris comes llamen horribles vampiros dormida niveles largas pandilla agrada traigan onda atrapados duque bajas dejaremos trono canto aumento esconder políticos muertes anthony pensabas saqué taller fantástica practicar asientos armado gibbs habrán considera atender ponemos we consigues sentados costó soñando stanley creó ayúdenme juzgado hablarme janet bebido pierdas ponlo gallina miguel octubre sentirme riesgos dificil besar lavar sacarte cuyo cayendo emocional prometida molestia christine consiga huella agarra karl condena decírmelo cafetería honesta tómate pablo medidas ofreció dió quizas celosa instinto bancos mías emocionado juguete villa conocida servirá norman centavo lincoln connor potencia unido julian copias receta interesada seguirá oírme normas cocaína encontrarte cambie asesinó huyendo marihuana entramos congreso capa tocó mágico beneficios aburrida invito período corredor marte ayudaría cortado mentiste olvidaste nieto odiaba fraude zapato mantenerlo liam tiró sector conseguirlo furgoneta causado beneficio querrías graduación alejado junior complejo miraba patas columna empieces bienes quisieras clásico saque oírlo hígado robaste decías all lleven trabajé muebles actos células presa hubiéramos travis joan páginas raymond llenar riley cambian sonríe moscú ordenó go motel venimos cuente preguntes mentido decidimos house alimentos actúa prefieres mason presupuesto prepárate ubicación etapa olvidaré trajes santos idioma fruta reconoce vuela ganando bendición luis compasión reconocer desarrollo contarte vomitar cazador pesca arco wendy llora abandonó supiste abogada fama plano elige maíz remedio harta maria muéstrame audrey acostumbrado green leonard disfraz termino hombros química vela muelle tiroteo dirigir enterrado acento psiquiatra escoger estupenda canadá indica deudas subiendo bla desayunar tomaron fines espíritus ingeniero cráneo desesperado baby separados queja jugada bajando signos dirías von buscaré comen hong pediré documento descripción tercero estructura rehenes lleguen botellas encuentren bomberos horno préstamo black tratamos autopsia ocupados penny metí pares propietario supieras adecuada cuarenta profesión británico exámenes tracy evan seth moleste agosto logró marchar logan crecido representante empiezas tareas gabriel vodka dí re terribles infeliz enormes geniales generoso brindis rita directa hacéis actualmente rifle casino logro trajeron celos artículos estable escuadrón ciudadano colin sospecha violento engañado relacionado niega vietnam batman vendió ralph chaval macho allison menores constantemente conozca directora borracha ventas alivio trauma enseñarte estadounidenses necesidades bart exposición negociar todavia explicarlo copas golpea edificios región duros moviendo kitty aman kong ford shh lógica eligió sammy sangrando jefes comió traducido narices deberes grito empresas contactos engaño acusación cirujano pagando cenizas retraso asesinar mentí imaginas haciéndolo ocurriendo pechos solicitud enfermedades soporto buscarla mona fresca prioridad mentes francos rumor confías dibujo saliste contaste buscarte prefiere almirante gastar vendrás use craig warren conjunto profesionales ciertos verdes invitó alumnos presentó informar cortó maya apagar malditas harían nelson besos graciosa chinos noviembre invisible contarme economía logramos combinación enfermos conectado sucederá asumir rusa habitual id posesión inténtalo ministerio saludable firmado oreja calientes personajes liberar cogió toro pintar eternidad similar sobrina tortura máxima franco earl raras paige espérame nene deportes sígueme sra pulmones cuánta necesitaremos isabel acabará manzanas ratón eléctrica ee productor quédense demuestra lauren eventos entendiste reciente empiezan pasaste enfrentar dejaba escucharme apariencia aves radiación advierto quemado corea sandy síntomas japoneses kurt juzgar adrian cervezas quemar kent marzo meterme cuarta gatillo azar soledad vera método creciendo amenazas alfa afecta alguacil jugado excepción dignidad graves riendo aaron pasear autorización concepto enseñado molestes volvieron llevaría pato duncan padrino vigila generalmente"
-  ],
-  ru: [
-    "не что ты это на он мы как вы да мне нет меня так но его все она тебя если за бы тебе они чтобы же есть просто из для ну когда хорошо здесь по был знаю то только всё было вас может нас вот от быть кто будет почему вам их очень могу уже спасибо или нам еще там нужно сейчас где чем хочу ничего этого была мой ее ладно знаешь до этом потому теперь думаю больше её со раз ему надо время этот ли ещё пока даже привет сказал себя должен тоже хочешь давай никогда эй того тогда него ни тут были конечно правда об моя пожалуйста тобой сказать сегодня один лучше можешь сюда мной значит сделать всегда дело можно ей должны порядке без день том буду делать хотел чего эти много после этим всего во твой ним лет боже них сэр ведь мистер жизнь потом ней такой который всех через им возможно немного такое слишком себе зачем должна моей люди знаете этой думаешь свою точно человек твоя под сказала назад эту можем случилось мама мог вместе отец сделал мои кажется друг куда никто поэтому эта которые два тот сколько понимаю снова жизни нравится людей помочь видел люблю хочет место знать прости отлично похоже парень домой всем деньги иди времени дома именно доктор думал говорил делаешь будем прямо стоит поговорить найти разве слушай своей лишь ага можете простите хотела сам тем будешь прошу три деле хотите говорить давайте совсем знал знает какой моего скажи дом дела вами свои говорит несколько должно про ваш происходит жаль туда действительно папа завтра оно черт одна перед наш уверен отсюда нужна самом тех нужен свой мою кого верно работу каждый твоей будут хватит понял нее уж имя против пор чём раньше говорю более надеюсь итак при ваша вообще пошли мать нельзя наверное нами твои могли дай ради всю ребята ко хотя понимаешь идти этих откуда такая ясно другой извините вижу видеть над могут равно мисс скоро будто зовут виду наши думала послушай между своего вопрос этому почти года человека которая подожди руки нормально такие возьми минут извини вещи могла смотри хоть работа пару сын ваше дня пора неё жить видишь достаточно господи быстро твою весь убить ночь говоришь собой скажу готов слышал какая посмотри первый самое видела пусть месте нашли сказали плохо смогу ваши отца детей знаем рад прав никаких имею миссис иногда смерти своих пойду брат вроде рядом мир произошло которую сделала говорила знала мое одного таким помощь такого кем насчет вчера случае увидеть нашей говорят правильно убил одно пойти друга сама долго работать дверь делает женщина важно кроме будь собираюсь вашей нужны здорово номер проблема проблемы денег чёрт хороший твоего одну дальше вернуться давно последний ночи узнать уверена машину права пять моих также тому вечером дети опять серьезно работает своим сначала две одной моим те жена думаете помнишь глаза ними чувак ночью чувствую взять сразу утром часть придется стать идея дорогая прекрасно слова сделали видели наша сердце помню парня момент утро здравствуйте стал скорее ох большой часов год друзья сильно говори смысле которой уйти которого капитан работы любовь дочь новый боюсь имеет стой дней той голову ах столько понятно дать девушка довольно доме вечер оба пойдем увидимся шанс хорошая прежде сделаю какого быстрее понять рассказать вашего бог интересно затем умер обо никого парни самый твое вон пришел чтоб поверить слово будете нашел милая странно какие ой та однажды сможешь получить обычно ума полагаю алло посмотреть иначе наших тело хотели свое пришли моё другие выглядит подумал лицо приятно мам говорите обратно нашего телефон мире честь господин доброе план другом час джон пути делал типа посмотрим насколько пытался правду решил поздно нем",
-    "работе любит хотят кому сестра места скажешь следующий других получил кстати говорили пришла безопасности рада город внимание кофе которое вся семья конец позже дал думать спать вернулся остаться некоторые кровь оружие пришлось хуже дорогой полиция сможем понимаете четыре которых ужасно ждать способ делаю готовы совершенно смотреть вернусь большое единственный вперед часа муж идет таких ребенка машина стороны смог сына играть сами верю честно нашла звучит угодно руку начала перевод какое взял станет пытаюсь внутри знали новости добрый подождите скажите ребенок вашу мальчик осталось делаете году мере поняла отношения далеко вокруг хотим слышала двух приятель никому мужчина неделю вернуть смерть сих ту сможет the дайте двое видите долларов крови решение путь следует неужели около готова семьи идем смотрите круто история вдруг спросить твоих второй вина джек женщины нашу заткнись минуту собираешься твоим шоу прощения больно машины пап трудно постоянно поможет проблем например дерьмо полиции начать знают лучший добро спасти рождения оставить чарли любишь конце забыл месяцев часто мило комнате нему матери милый полностью школе леди серьёзно убили случай джо убийство послушайте посмотрите пошел никакого сделаем говоря неплохо использовать прошлой иду узнал прекрати чуть держи невозможно господа слушайте наше машине сэм свет образом иметь другое другого шесть людям погоди имени детка недели меньше легко крайней девочка придётся мало ненавижу you последние насчёт выглядишь сообщение думает друзей обещаю агент вместо последнее самого настолько ответ детектив понятия родители показать поехали стало мэм своими всей очевидно помогите маленький школу пожаловать твоё либо забрать прошло особенно имеешь истории эм вопросы большая минутку пол остановить чему свидания обязательно городе убийца сделай ваших любви спокойной своё мадам идите выйти делают немедленно делай возможность человеком бывает ужин моем купить позвонить наконец стала любой клянусь смешно абсолютно всему переводчики забудь секунду выбор тысяч потерял майкл волнуйся ноги таком настоящий означает встретиться известно работаю замечательно любом оставь связи боль выпить представить убийства малыш умерла воды окей речь хорошие поводу перестань увидел повезло президент мужик которым прошлом дам десять умереть поговорим отцом искать тихо оставил пистолет начал сложно города неделе хотелось принять историю босс держать пойдём подумала фильм слышишь рано удачи еду словно причина пришёл компании спокойно работал подумать вести вещь брата конца получится блин право ввиду бога подарок комнату мира успокойся позволить моему идёт самая рассказал курсе намного мистера женщин тяжело ух предложение одним счет улице другим уходи майк среди помоги получилось месяц проверить генри голос позвольте стороне вероятно случится уверены мужа питер провести людьми неважно нашёл доктора месяца игра идём нём джордж познакомиться возьму слышали пошла корабль чувствуешь позволь сторону игры согласен письмо вниз молодец наверняка утра вашим нечего встречи вид никакой связь список такую весело сидеть гораздо собирался впервые находится объяснить полицию решили семью свидание отличная остальные прийти руках фбр чувство котором решила понадобится сынок найду фрэнк школы чувства дядя стали ушла первым поверь расскажи хочется девушки сон имел каким парнем многие части ехать считаю никуда голове старый оттуда называется вопросов фото пройти заниматься другу вернулась пара никак девочки благодарю своем недавно приехал глаз могло становится пыталась является брось богу нашим помощи волосы невероятно одном ушел джейн to тела недель собирается защитить всеми существует жив первая позвоню благодаря вперёд навсегда помните земле делу вполне пытается будущее семь своему ок идиот слава стоило удалось делаем команда главное огонь дэнни замуж начали мужчины силы семье шеф суд слышу тюрьме попробовать друзьями алекс вашем новая маленькая черта придет страшно услышать новые общем звонил купил понравится близко самой смысл хорошее любил сара единственная делали макс мэри жду получается хорошего эми дамы жену гарри неправильно стоять плевать ключ верить лично слышать взяли поздравляю пить заставить получили рот делала преступления двери землю разумеется очередь первой разговор видимо звонок джеймс менее нового получила хм подальше сможете",
-    "похож состоянии необходимо адвокат касается секунд стоп дали оставаться сделает ходить помощью хватает изменить король народ новую девушку живет секс сделаешь думали нашем попасть каждого другую просил пошёл войны случайно игру мертв держись забыла цель минуты месье выше однако женщину раза мысли выход платье вовсе пришло женой ребёнка сожалею твоем осторожно смогла этими стану маме парней нравятся покое поехать садись миллионов отличный ребёнок дочери дороги ого ха нечто первое выяснить ник информацию офис записи лучшее течение вечеринку убью годы забыть правила сожалению слов джимми дни дала жизнью совет занят попробуй подруга расскажу целый красивая попросил вышел удар вещей адрес дэвид оставьте сержант увидишь виноват разница открыть написал ждет новое счастлив вау выбора продолжай задницу покажу единственное доверять встреча убивать концов обоих будьте останется тюрьму наверно ищу момента обед лица видео стойте взяла подождать считает вечно покажи бен книгу многое земли дел какую поскольку узнала сильнее жены встречу весьма блядь поняли родителей оу лейтенант глупо узнает думают сезон снаружи голова мамой заняться кино вечера свете выйдет восемь найдем помогу больницу больнице магазин тони заметил договорились слушать бизнес примерно уехать мамы позвонил выходит маму документы попал шаг отпусти смотрю здравствуй понравилось смогли правы большие рассказала идут готово плохой офицер узнали скажет сюрприз внимания вышло дорогу считаешь фотографии вода делом каком полный следующей доказать захочешь книги война планы мысль веришь видно скажем большинство ребят продолжать ранее жертвы ближе качестве двигаться написано чувствовать хорош любить величество головы дороге попросить времена подумай забавно главный внизу каждую остался вставай мнение твоему часы вряд постой сомневаюсь отдай вечеринка ошибка приехали бросил вернется профессор любят ключи подходит беги ничто поле вышла открой воду сексом музыка побери бабушка собираемся несмотря госпожа стране рэй отдать трубку сил кончено другая комната ричард сердца опасности сша закончить детьми врач живу имеете команды пожалуй роль порядок группа встретимся кольцо самые позвони всём вверх разговаривать джим закон мужчин шутишь играет хорошим новой начнем ухожу член такси серия днк получше убила настоящая молодой эмили показания одному шутка уходить снять недостаточно каких кейт одни разобраться язык едем директор сто энди учитывая спросил днем первого джей наверху говорим счастлива помог отцу приходится определенно сигнал закончится помогает группы моём едва легче ответить спустя принести секрет приказ де опасно позволю билли бросить телефону самых эдди получишь господь внутрь компания прекрасный томми такими and пойдет женщиной работаешь большую волнует рук память старик избавиться квартиру закончили информация встречаться удовольствием спас мозг читать ким чертовски стол джонни ублюдок дон тысячи боб ложь it ёто потеряла взглянуть писать мен увидела передать войти везде бобби кое солнце устал сделку настоящее потеряли мм класс смотрел держите закончил марк джерри потрясающе обещал убедиться скажете факт уничтожить страны учитель полно начинается бежать операции сукин ошибку украл данные двоих света запах придурок найди лучшая вернулись убирайся боишься окно убийстве ситуации костюм казалось доказательства обсудить жил принимать море оставила судя штука ситуация возможности следы генерал рождество платить пытались забрал эрик самым великолепно песню билл помогать новость силу жертва баксов другими обожаю достать вовремя появился кларк тише одежду приходит расследование зато девушкой яйца зависит принадлежит согласно предложить уровень любила вашему собака знак чисто срочно начало вне клуб искал собираетесь души расслабься супер ждал неправда доступ куча туалет знакомы офисе сука слегка ждут песня наверх небольшой анна красиво запись причины работала состояние белый зайти дважды думай центр дружище исправить джейк использовал идешь желание книга многих разные полковник оказался идеи добраться нос возьмите матерью суда каково сила уходите рука повсюду лучшие сделано взгляд наркотики бери судья чушь плохая система практически выходные лили суде еда док узнаю нож написать собиралась чай глазах остальное брак представляешь остальных мимо поеду потерять старые звук частью приехала даст спит пытаешься выглядеть беременна увижу спал вкус крис поезд пиво уехал устроить радио обе команду безумие решить солдат ме мальчика короля проще особо ребенком дедушка мертва церкви результаты имена беспокойся неприятности камеры отправить брайан здание шон возле защищать плохие работают называть третий способен удивительно смысла долг боли клэр первую стыдно случиться сестры называют райан счёт слушаю мартин возвращаться выбрал черту инспектор земля оказалось сходить головой плюс оружия музыку явно сказано назвал стрелять своём столь ушли последняя лицом решать остались заплатить разу жене даю центре началось президента сообщить кучу чтo звали принял придёт рода справиться поцелуй сбежал еды встречались прошла команде оставлю ищем согласна останусь тест прошлое смотришь код двумя шучу человеку выбраться следовало продать нe которому звонила поставить клиент здоровье прочь приду держу поговорю похожа рассказывать играл стив заставил встретил самолет кости сбежать прекратить уйду принесу власти ушёл остается постели вернись впереди захочет реально двадцать квартире маленькой важное ешь бар жива дает завтрак любовью зря полицейский принес ƒа мария страшного устала прекратите убери нравишься заходи энни сработает старая скучаю заявление плохого поймать ответственность прощай девять осталась наедине выбрать обвинения ммм that компанию поедем цветы имела ждёт камеру новых преступление трех кусок пропал посмотрю медленно душу получит рады значения забрали пойдешь сохранить привести видит информации войну письма бумаги холодно руками томас упал моими отношение карл ма операция судьба of любимый задать папочка внезапно временем представляю церковь решения чувствовал чудесно специально маленькие дурак ад мальчики начинает компьютер станешь продолжайте роберт урок кровью глазами занимается линии люк брать давать вновь трое девушек чё услышал вызвать работали позвонила бороться остановись вариант послал назвать просила ход положение вернемся уходим уилл связано каждой звонит роман миру беспокоит кэтрин номера комнаты прекрасная победить правительство ищет систему попросила операцию ногу поступил прошлый живёт герой воздух живут читал адвоката поступить поможешь адам люси чудо разных школа курс отель задание приехать умру телефона считать ценю мечты родился работой вспомнить виде похожи слышите уходит понимает угу кровати умоляю срок действовать мужем извиниться пахнет дух лучших отдел будущем большим беспокоиться узнаем интервью скотт сыном предлагаю убит болит каждое встретились итоге мяч закрой умею справлюсь убедить остановиться возвращайся цели форме сидит королева дождь отдал бывший едет танцевать пива причин обязан проклятье колледж мозга оставайся системы карты просить садитесь хорошей душ смогут камень волнуйтесь страну звонить проводить ура мёртв смотрит детям мужчиной труп вино армии убивал вкусно заставляет любое которыми твоём малышка эбби правило кровать кабинет чарльз баре действия ситуацию убрать жениться ходил джона исчез келли погиб зрения счастье желаю давление душе взгляни основном прошел душа свадьбу тюрьмы отдохнуть фунтов встать произойдет дженни миллион святого глубоко сзади святой подобного предложил пит значение отеле позади идеально занимаюсь занимался нескольких подобное мозги несчастный рассказывал считаете выходи in полной свадьбы мамочка страх появится банк носить отпечатки ничем чак возрасте горжусь выиграл принесла встрече нибудь приходить следить лео ног лекарство лучшим тип умирает признать воспоминания имеют защиты билет выпьем работаем купила выиграть трогай магазине красный петь название вытащить сестру отвечать отпустите кевин контролировать чёрта власть вторая волноваться бросила спрашиваю секса данный красивый джентльмены суть уши оставили начинаю сотни связаться окна доброй майор держаться цру штаны занята отвали цвет получу сидел случается хозяин учиться некоторых прошли погодите некоторое братом считают новым показалось целую поблагодарить количество лекарства сумасшедший расскажите ожидал элис умрет грейс слухи участок улицу классно животных изменилось странный передай ди надеялся собственной гости дэн контроль грудь братья миль улики огромное замок данных дому районе сядь наоборот богом элли создать закончилось отвечает побыть поесть умеешь лесу самому алан отправил деньгами принеси таблетки ресторан нашему поверьте включая живо мужчину придумал шериф хрена ханна собирались половину ён забыли сделайте удовольствие стараюсь проходит спала автобус настоящие me узнаешь спроси лучшего придумать вечеринке пользу появилась списке лежит живой счастливы понимать плохое любого зубы кухне попытаться расскажешь буквально клиентов ван копы no великий пяти прием скучно приходил песни девчонка рукой попала джош проект бой естественно стивен увидите процесс делайте вызов ниже рейчел перерыв дерьма принцесса само врн ненадолго радостью ответил убьет тед короче провел сесть вечеринки попробуем теб вернётся разберусь умный поймали ак кошмар днём дорога общего жертв ведет очки барри чикаго найдём игре официально попробую энн женат совпадение начальник убивает терпеть счастью гей множество убьют болезнь свидетель тему элизабет службы положи пригласить бояться точки голоса дин собрать памяти хороша думаем пригласил классе проверь парню этo убийцы вину харви больницы смертью всякий принц",
-    "бойся надеяться поднять обнаружили перестать отойди покинуть чувствует нелегко ими оказаться жила избежать старший представляет столе ошибки половина смей заботиться лаборатории любим успокойтесь имеем последней вызывает важнее первые убийцу полегче женщине жили позволил груди праздник умеет присоединиться черный опыт бред болен су источник собираются любимая занимаешься картер эмма побольше закрыть ангел тренер откройте ветер остров первом семьей интересует беру уехала виновата кэти морган ищешь контракт получите телевизор любите попали местах ненавидит целью дольше полчаса согласны войне осторожнее замужем звонки причине папой пойдёт роли спишь управлять собаку бля представь глава постель правде шум придут ударил схожу провели начинать внимательно пятницу проходите кафе отказаться поговори предупредить свободу переживай начнём полная руке улицы виски странное фил артур карту знаком словами оказывается звоню уолтер энергии познакомились ларри бежим сквозь шлюха ордер капитана согласился мертвы класса написала париж страна умирать зад счета сильный ерунда дерево одолжение домом колени выжить ждала грузовик заплатил путешествие узнают чек билеты достал спину останешься надолго рак помощник парк стены сработало ощущение показал полу находиться девочек робин карен пёп любую ќе зная сообщения именем квартира анализ другому совершил оливер лошадь ответы готовить субботу дышать зла мэгги выгляжу разрешение девчонки хрень секундочку перезвоню миллиона одиночку займусь увидит боится одновременно использовали спрашивал лиза врать отказался цвета жертву теми метров горло дворе пропала дитя пошло небольшая станции чувствовала бедный статус поведение начинай ванной кабинете немножко извинения здания удастся виделись пытаемся отпустить спросила выходить извиняюсь свадьба джесси марта проверю контролем we отвезти доверяю найдешь сражаться звезда найдут заберу лагерь ходит посреди звони браво мишель скорость использует заслуживает заметила спиной прям возвращается положить воскресенье чертов мэтт ть камера впечатление оказалась корабля мясо обсуждать фильма разговаривал штата результат крайне держит доказательств вселенной признаться необходимости детали ќо группу грустно штук ком эндрю меч убей занять одежда бомба on чувствуете кейси поймал ящик работаете клубе тоби забудьте живых алиби пройдет проблему свободен he подойди каждая детстве считал налево помни девушке напоминает дают увидели фильме постараюсь потребуется сестрой отношениях отношений доктором джин надежда приедет личное обычный изменился ужас салли мэр условия ай иисус ќн научиться играю разрешения нашими связаны пациент обвинение жди старше начну старой пропустил палец my позабочусь прошлого сумку боялся красивые простить найдите франции секреты верите америке ужасный драться создал гостей колледже нигде заметили молли позаботиться терять рисковать отдела след золото волос простой доктору отстой будущего ровно собрались совета штуку водой саймон спрашивать приняли пытаются воспользоваться требует марти живешь играешь клиента позвонили стоял отпуск аминь движение особенного каждом заняты наплевать мечта надеть зал арестовали виктор шансы минимум оружием неловко захотел джейсон начинаем понедельник сне вернешься риск сучка попытка скучать софи каждым огромный помогла второе встретила провела сомнения подумали скорей is мастер пальцы небо открыл съесть сериале займет добиться сперва заходите ла послушать двигайся большого норме личность товарищ донна поставил приходи быстрей следующем заслужил мест лес горы собаки джереми гений занимались встречался джонс твоими проверил привело врача людях сверху опоздал мистером парке мо поиграть нил несомненно дашь вышли управление разум хороших прибыли плакать получает украсть стоят собрался лондон стене рш джейми заново напротив искали программу желания полное девочку болезни планете покончить близки рик взгляните охрана лице сделка армия выстрел ужасное крутой выйду круг поехал стену поделать счастливой тьi хэнк росс вещах зале требуется нравилось зло украли верит отправиться наружу последнюю устройство лето уме хан поисках отчет встретить закончила отойдите ћы хелен вскоре дочерью ответь враг ищут исследования оказались пола сцену умерли используют отдам наблюдать мсье закончим силой пытаясь подружка справишься ждали бесплатно поиски попрошу форму открывай живым неожиданно своя бывают появились мистеру собственный писал пожар обнаружил следов продал командир планеты представление говорится важный ќет псих тим бо борту свидетелей полном выглядят уильям контакт ранен смотрели позвоните хрен снимать субтитры стэн ходят жарко цена терри хмм сети животное искала плачу постарайся бутылку пенни надоело объясню футбол похороны управления тупой агента приходят второго останься пальцев упала обмен миром продолжим безусловно торт уйди выхода блять поработать взрыв отвратительно волнуюсь клуба участие счастья получим квартиры папы красавица участвовать америки вырос недалеко добавить отправили дэниел тетя платят элисон пьян общаться сбежала кайл удобно коп дл лицу вспомнил рождества фу ходила принято наблюдения голоден подозреваемый джексон выбрала группе смотрела дождаться направо столом нога дорогуша сыну куплю просит каждому занятия выбирать папе нападение англии вернёмся произойти хранить чаще тратить возраста восторге обязаны некуда объясняет молоко служба корабле напал сыграть помогли степени лечение остаётся продолжить париже осторожен настоящим закона границы кэролайн радость беспокоюсь луис глупости превосходно заставила благодарен собак уберите хорошенько выбрали приняла входите последнего пойдемте преступник устраивает теле самую женаты пирог бросай карта постойте лорд джеки расстались носит плана верни сок установить пациентов родителями книге мари надежды модель общества следующее мусор сплю единственным эд доказательство беспокойтесь ходили держитесь уходишь нанял большее мак напали призрак связан свадьбе уверяю последним посмотрел далее цену заказ патрик маленькую играли определить повторяю продавать точка дружок процентов пишет джефф родителям оставайтесь газеты дар новостей приступ словам ворота штат здании число автомобиль ти сердцем принимаю секунды папу понравился разговаривали дыхание помнить замечательный возьмем пример пользоваться проверьте борт ужасная принёс роза смотрят идёшь оставим причиной штуки звонили сними настроение положении судить ею водитель собрание угол названием привел отстань предпочитаю странные подарки звезды концерт отвечай разговоры убирайтесь кан четверг камер защиту доставить задача шею прислал живы острове сумасшедшая фургон арестовать ложись солнца счастливого хорошую силах одиночестве контроля каков трёх нравлюсь шансов верну магазина увидеться поля маленьким пары сан лучшей живот туфли роуз образ вирус дьявол талант наказание владелец видим отличное пугает погибли даёт творится договор очереди безопасность сознание сошел самоубийство свободны увидим причину способности пытаться заплачу вины века миллионы кричать системе высочество президентом женился события доверие роджер зомби следовать обеда джесс сделаете относится ребёнком стиле виновен изо джулия скрывать фамилия прекрасна банка фотографию правил успел дверью пальто ответа эпизод тридцать выглядел делами защита сделают счастливым лестнице оставлять воде провожу повод спросите послать столик найдет полгода летом месяце вера началась ми ошибся хлеб пари чжин устроил шанса программа должность выглядите танец подняться завести духе пули расстроен ждем лондоне появляется приятного ел исключением расти пациента покупать глупая положил захотите дорого прокурор раны народа ребекка исчезла подумайте опасность почувствовал злишься нехорошо роде нуждается младший дадим сестре пропустить спрашиваешь стреляй событий редко базе свободе скорую пуля минуточку освободить приглашение слушаешь выйдешь кэрол точку журнал ќу наркотиков вход теория глупый тома умираю стрелял навестить безопасно настоящего прибыл этаж уволили службу самолёт услугу определённо забуду молчать шутки подожду оливия проверим картину пей пост рой смех ногами поддерживать бить вел полицейские членов страха оскар покажите разрушить заметить лоис what обещание поддержки начале следи разговора собственную странным кусочек одежды держал будучи позволит приготовить понравилась лгать обсудим суп обоим встречалась общество тысячу пойдёшь умрёт боялась маргарет принимает воздуха победа маленьких старого район подряд поедешь спрошу неа приём неделя снял успех возможное собственного личности находятся чья перестал дыши подойти годами целая your территории уроки любили машин хватило сцене углу странная друзьям смит кармане сьюзан спасла смеяться эрика попробуйте милорд станут эйприл сценарий доволен фактически сути директора майка съел пулю газ маленького хо безумно слева деньгах надеялась принесли звать высоко сеть изменится эшли вторник вынужден едешь заднице ем тени задницы позволяет зак показывает поцеловать прошлым закончу точнее солдаты настоящей заработать this береги расследования фред большего отличие веди действует замолчи речи играют возражаете этаже хватало фрэнки вреда делам средства представляете поспать зеркало тедди расстроена for верил re читала почувствовать свободы нравиться поверил толку бюро проснулся отеля фотография следующая образец правительства области последствия услышала меняет десяти бомбу позволите навредить поступила шевелись поближе долгое половиной правды пакет пойми движения переговоры программы подвале поступать офиса победил задница армию лиз грант умная небольшое урод захочу кэрри классный справедливо дне новом фильмы ибо стоишь щрн чжу передайте просили сильная поддержку проблемой концу протяжении больна джули подать слышно стиль обращаться согласилась следующие искусство аварии отличные копов счастливо отвезу карьеру дура се старых машиной пригласили остановите рассказывала занимаетесь юн улик интернете ужасные слушает вдвоем продолжает лжи живем правилам хуй больших признание делах маркус попрощаться отправился вызвал предстоит лесли обещала переехать звонков прекрасное остановились сделки опусти статью уровне полную забывай служить поблизости жертвой танцы университет заставили научился сошла скрыть приходите рай давал врачи угроза горе невеста лодку ээ заранее ум пью становятся белого учителя печально сенатор красавчик идею мадемуазель подтвердить скажут самим изменил прошёл видят яд отследить напарник детства пойму факты заканчивается начинают родилась выпил период ресторане купили ведешь уважения подарил левой проверили существо любопытно вашингтон почту любые чудовище непросто замечательная выпей помнит тайлер смотря alphahff построить пережить направлении ненавидишь меры вред тема зашел интерес красота справа кожа способны барни настроении назвали брюс убийств главным придешь начнется подписать приходилось майкла менеджер oн подруги елена лучшему сломал веду остановился жопу округе tы сознания ножом встречается главная товар уровня кожи приеду сегодняшнего пил выражение летать научил сижу рэйчел такова получать джека тошнит обсуждали фредди бывшая аэропорт позиции лорен повторять прочитать бонни проваливай найдете результате считается вправду станем белые прикрытием рыба форма записку поделиться сью ааа относительно остановитесь имели остальным расслабиться учился винить женщинами ведут соседи мешок засранец восстановить сеньор городу лабораторию сволочь спасли классная помогут лошади приму наркотиками охраны прокурора банке подойдет издеваешься выходите парнями останови пораньше помогал че фигня представьте умирают лу забрала убьёт америку гость монстр линда мин изменилась помешает сосед попытался острова громко сад",
-    "правильный судьбу добры отомстить адвокатом народу менять занималась наиболее расскажет бум проснись нахуй счастливый вернутся интересное каждые стакан важная уйдет хлоя чёрный масло русские врагов коробку линию существуют взрыва министр обратиться отменить скорости сложнее жалко передо лукас нету миссия винсент шла спенсер аманда размер окажется падает джоуи сообщили шел ограбление лежать поймешь прелесть больной проиграл повторить изменения привезли личные поехала справимся испортил бет нечестно закончилась свидетеля санта вашими картины зол курить поездка хожу отсутствие доброго убивают спрашивает нa узнаете проверка боятся чан плане гордон бетти купер шести огня мотив поговорил занимаются полицейского назвала реки чжон брату сумму пишу мальчиков ставки материал лодке вали желает прочим перестаньте привела напомнить учить местечко застрял трогать рид луи бросили творишь север показаться заполучить вероятность рикки ведьма нэнси вор высокий ест метро героем передам братьев пацан встречаюсь открою взамен встречаемся кот лора последних способна члены угрозу совершить by америка следующего рыбу джессика пешком известный службе мужу выжил ответила пригласила разок действий реальность чей вторую вес дорогие ошибаешься сиди камере разницы пляже послание хи казино езжай благодарения нравился джоан первых итан подобные мешать уезжаю дерек ночам мечтал мороженое туалете стою миллер побыстрее автор запомни рон нарушение свинья партнер хён встречал обязана разговариваю уехали происходило бедная тётя мальчиком базу добра отдала луна соглашение способом встал was губы канал изменит шутите закрыто сдать огромная подними поможете ездить научить печенье колледжа брал саду гэри поддержать мнению джонсон тейлор заменить какова поспорить обычная входит сыр согласиться участке случая успеха взрослый бесполезно одри стреляли троих девочкой лидер гиббс осторожней угадай помогло сидишь бомбы забери беспокойство отряд ожидала умрешь ведёт получаю позволила скорой снег звонка снимай энергию времен животные ева рассказали отправила телом стоить развод предполагаю хороши чёрту лив арест искренне играем кристина вещами пусти использовала возвращайтесь организации крышу рубашку удержать конкретно аду километров залог бей обстоятельства являются with брака выходных крошка врага воздухе показывают возвращаюсь поиск пытаетесь приближается ботинки полицейских шоссе похитили рассказывай искусства состоит выступление личный бизнеса спорить считаем джастин священник хвост деревне меняется украла ждешь снимки начинаешь признаю специальный берегу дадут присаживайтесь сиськи касл сообщил кит злой перейти визит победу привлечь натворил борьбе важна уважение судьбы all задавать свобода болтать интернет микки нина одиноко музыки включить рейс осторожны сорок говард заднем попозже любая потратил комиссар джордан свободна местом be арестованы спальне натали подери правой трус понимал шли дед убежище убежать чая браун какими радости позор вызову придти молодая характер продолжается лошадей температура кухню жестоко впечатляет агенты подругой зои попросили горит предположить тодд херня художник тревога старался номере стрит приходила нести плачет угадаю опасен ищете путем сторона ждите причинить проходи красивое стюарт приказы жутко мост плану уволить запрещено тост пэм неизвестно спине испугался рэнди идиоты подпись набор энтони удивлен штатов убийцей влюблен камни враги партии стола принесите обувь подходящее границу подумаю объект братан сэмми кенни правдой кровотечение берет разговаривает луиза порой неудобно понимают входи реакция самостоятельно чувств картина автобусе большей заказать сел приказал вопросом удача сэма влюбился ногах охрану поживаете беда поторопись отце притворяться возвращения тень советую недолго верится зашла попался слышит справится важные возвращением предложения планету серии николь выходной кресло поездки нормальный долю тина эдвард умнее магия двигатель звоните вечность привык невиновен рори кузен отношению начнут потише винс парочку останемся звуки мешает глупость собственность карлос таков потери понимаем лиам оборудование заказал маленькое книг гнев смеется помимо слушал поверишь парочка приведет бут главного желаете красивой платит офицера чаю белье сосредоточиться берегись пустой мудак кристин отделение университете милые вернул четверо тепло прямой глубже линдси эффект пульс трудом пускай пятьдесят ночной грубо опухоль четырех паркер выполнять проводит линия обид кончится оуэн берите кричит темноте устроим спасать майами пиццу беспокоить покой малыша сходи марко босса грей занимаемся солнышко леонард бегать дневник моменты испортить неприятно домик мэй стекло прими влюблена ян ужина объяснение эээ мю допустить крыше тхэ ожидать детектива провёл крик называли играла выразить успокоиться джорджа надежду всяких использую сильным градусов морской марш починить уилсон замке крепко послали заплатили спокойствие скучал согласились такому собственные событие дама используй дженна извиняться предал нанять соль сидела би теории стул месть so ошибкой терпение целых вида обязанности поздравления выхожу днях сна выясним приятный медсестра капли здоров карла прекрасные отделе чёртов дочка небе шее диана исчезнуть барт райли остаток птица встань клетки чжун лиззи ставить программе новостях пропали разговаривала разговоров выиграли ноль плачь эмоции пространство увидят заодно возражаешь сменить выполнить используя считай ударить вывести пальцем хейли веру эх законы сомнений клиенты усилия посадить сотрудников позвать врачу ходишь трейси горячая know природы эдриан утверждает почувствовала показывать английский исследование знай золотой костюме чо благодарна сойти тщательно просим идеальный полезно умно студии погода км поставь командой средств объяснять тв диване жених кнопку ванну председатель обстоятельствах пойдут следующим рим нетерпением телефоне изнутри воняет минутка позволишь юг страсть нью взрослые течении задумал настоящую моника трусы следил иск предыдущих опаздываю присядь джеймса передал покинул втором эфире разрешите питера наоми списка рассчитывать коем эксперт произойдёт дэйв личной центра can ставлю прочитал рынок принца лагере вызвали позицию семьёй агентов реальности поворот отказалась дышит бегите личного расходы игрок лодка меган театр полон предупреждение бывшей опыта океан сердцу смириться знакомо судно блэр приговор do уважаю секретарь единственной условиях языке робби открыто заставило молодых паспорт экзамен гордиться шампанское движется раскрыть фирмы ошибок используем возраст жен меню чести американцы пострадал несправедливо найдется белых грег южной болван лемон тишина филипп пределами надень заслуживаешь бедняжка напишу доверяешь тюрьма угрозы пробовал никки коул небеса справился даг трюк приносит войска страдать плохих поговорили вела вошел бабушки oh бассейн шарлотта don конечном руль венди стефан проснулась всякие приготовила водить денни удивлена планета насилия бегом марка бросьте груз показали сняли записать смс эл диск местные помогаю силе not прятаться сегодняшний глянь предлагаешь присутствие всє членом худшее грязные ын редактор советник полицией временно начнет have салат ненавидеть называешь пойдёмте пропустила старую наполовину летит строить подробности кей ричи беде крики духа захотела миледи делается числа помешать переехал молчание длинный горячий закону феликс воли долгий ищите пушку сравнению рынке подозреваемого напугал чемодан американский нападения захватить спасение спрашивала жизней купи борьбы начиная пароль шкафу многим военные германии выросла судьи исчезли гас грех обычные выглядела уходят сны спятил арестован ухо блюдо симпатичный молока дьявола разберемся нахожу сдаться лори привели тяжелый грязи"
-  ]
-};
-</script>
 <script>
 /* ================= Utilities ================= */
 const uid = () => Math.random().toString(36).slice(2,9);
@@ -330,358 +301,6 @@ function langName(code){
   if (code==='auto') return '자동 감지';
   const f = LANGS.find(l=>l[0]===code);
   return f ? f[1] : code;
-}
-
-/* ================= Vocabulary level engine ================= */
-const SUPPORTED_VOCAB_LANGS = ['en','es','ru'];
-const LEVEL_ORDER = ['A1','A2','B1','B2','C1'];
-const POS_KR = {
-  noun:'명사', verb:'동사', adjective:'형용사', adverb:'부사', pronoun:'대명사',
-  preposition:'전치사', conjunction:'접속사', interjection:'감탄사', determiner:'한정사',
-  numeral:'수사', article:'관사'
-};
-const _vocabLevelMaps = {}; // lazily built: lang -> Map(word -> levelIndex)
-function getVocabLevelMap(lang){
-  if (_vocabLevelMaps[lang]) return _vocabLevelMaps[lang];
-  const bands = (typeof VOCAB_BANDS !== 'undefined') ? VOCAB_BANDS[lang] : null;
-  const map = new Map();
-  if (bands){
-    bands.forEach((str, idx)=>{
-      str.split(' ').forEach(w=>{ if (w) map.set(w, idx); });
-    });
-  }
-  _vocabLevelMaps[lang] = map;
-  return map;
-}
-function getWordLevelIndex(lang, word){
-  const map = getVocabLevelMap(lang);
-  if (map.has(word)) return map.get(word);
-  return LEVEL_ORDER.length - 1; // not in top-frequency list => treat as most advanced tier
-}
-function tokenizeByLang(lang, text){
-  // 🆕 이번 대화: 원형(대소문자 유지)과 "문장 중간에서 대문자로 시작했는지" 여부까지 함께 반환하도록 확장.
-  // 고유명사 필터링(문장 중간 대문자 = 이름일 가능성 높음)에 씀. 기존 호출부 호환을 위해
-  // 소문자 문자열만 필요하면 .map(t=>t.lower)로 뽑아 쓰면 됨.
-  let re;
-  if (lang === 'ru') re = /[А-Яа-яЁё]+/g;
-  else if (lang === 'es') re = /[A-Za-zÀ-ÖØ-öø-ÿ]+/g;
-  else re = /[A-Za-z']+/g;
-  const tokens = [];
-  let m;
-  while ((m = re.exec(text))){
-    const raw = m[0];
-    if (raw.length<=1) continue;
-    let j = m.index-1;
-    while (j>=0 && /\s/.test(text[j])) j--;
-    const prevChar = j>=0 ? text[j] : null;
-    const sentenceInitial = (prevChar===null) || /[.!?…]/.test(prevChar);
-    tokens.push({ raw, lower: raw.toLowerCase(), sentenceInitial });
-  }
-  return tokens;
-}
-function isCapitalizedToken(raw){
-  return raw.length>0 && raw[0] === raw[0].toUpperCase() && raw[0] !== raw[0].toLowerCase();
-}
-function escapeRegExpLiteral(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
-/* 🆕 본문 단어 옆에 [뜻]을 직접 삽입하는 모드용 헬퍼. 대소문자 무시, 단어 경계(앞뒤가 글자/숫자가
-   아님) 기준으로 첫 등장 위치 하나에만 삽입한다. */
-function applyInlineGloss(text, items){
-  if (!text || !items || !items.length) return text;
-  let out = text;
-  items.forEach(({word, gloss})=>{
-    if (!gloss) return;
-    const re = new RegExp(`(^|[^\\p{L}\\p{N}_])(${escapeRegExpLiteral(word)})(?![\\p{L}\\p{N}_])`, 'iu');
-    const m = re.exec(out);
-    if (m){
-      const insertPos = m.index + m[0].length;
-      out = out.slice(0, insertPos) + `[${gloss}]` + out.slice(insertPos);
-    }
-  });
-  return out;
-}
-
-const _dictCache = new Map(); // key: sl|tl|word -> {entries:[{pos, meanings}], structured:boolean}
-async function gdictLookup(word, sourceLang, targetLang){
-  const key = `${sourceLang}|${targetLang}|${word}`;
-  if (_dictCache.has(key)) return _dictCache.get(key);
-  let entries = []; let structured = false;
-  try{
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t&dt=bd&q=${encodeURIComponent(word)}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    let dictEntries = null;
-    if (Array.isArray(data[1]) && data[1].length && Array.isArray(data[1][0])){
-      dictEntries = data[1];
-    }
-    if (dictEntries){
-      entries = dictEntries.map(entry=>{
-        const posRaw = (entry[0]||'-').toString();
-        const pos = POS_KR[posRaw] || posRaw;
-        const meanings = Array.isArray(entry[1]) ? entry[1].slice(0,3) : [];
-        return { pos, meanings };
-      }).filter(e=>e.meanings.length);
-      structured = entries.length>0;
-    }
-    if (!entries.length){
-      // 🆕 구조화된 사전(dt=bd) 항목이 없으면 대부분 고유명사(이름)이거나 사전에 없는 단어라
-      // 단어장에서는 제외 대상으로 취급한다(structured=false로 표시). 다만 아예 번역문 자체가
-      // 없는 경우를 대비해 최소한의 fallback은 남겨두되, 호출부(buildVocabMap)가 structured만
-      // 보고 걸러내므로 여기 포함 여부와 무관하게 안전하다.
-      const simple = Array.isArray(data[0]) ? data[0].map(seg=>seg[0]||'').join('') : '';
-      if (simple) entries = [{ pos:'-', meanings:[simple] }];
-    }
-  } catch(e){ entries = []; structured = false; }
-  const result = { entries, structured };
-  _dictCache.set(key, result);
-  return result;
-}
-function formatVocabList(items){
-  if (!items.length) return '';
-  // 🆕 본문(자막/문서)에 임베드될 때는 '[단어장]' 표시 문자열을 넣지 않는다 (사용자 요청).
-  // 별도로 내보내는 단어장 파일(formatVocabFile)에는 헤더를 그대로 유지한다.
-  return items.map(it=>{
-    const posGroups = it.entries.map(e=> `${e.pos!=='-' ? '('+e.pos+') ' : ''}${e.meanings.join(', ')}`).join(' / ');
-    return `• ${it.word} — ${posGroups}`;
-  }).join('\n');
-}
-/* ---- 단어장 생성 (🆕 이번 대화: 전면 재작업) ----
-   바뀐 점 3가지 (사용자 피드백 기반):
-   1) 겹치는 단어 제거: 예전엔 블록마다 "그 블록 안에서" 독립적으로 단어를 골랐기 때문에
-      같은 단어가 여러 문단에 반복해서 뽑힐 수 있었음(예: 흔한 단어가 3번째 문단에도, 50번째
-      문단에도 뽑힘). 이제는 문서 전체를 훑으면서 이미 선택된 단어는 `usedWords`로 기록해두고
-      다시 뽑지 않는다 — 각 단어는 "처음 등장한 문단" 딱 한 번만 나온다(본문 임베드든, 별도
-      파일이든, Anki든 전부 동일).
-   2) 고유명사 필터링: (a) 문장 "중간"에서 대문자로 시작하는 단어(예: 영어/러시아어/스페인어 모두
-      고유명사는 문장 위치와 무관하게 대문자로 씀 — 흔한 단어는 문장 맨 앞이 아니면 대문자로 안 씀)는
-      제외. (b) 구글 사전(dt=bd)에 구조화된 뜻풀이가 없는 단어(대부분 이름·신조어)도 제외
-      — 예전엔 이런 단어도 "번역문 그대로"를 뜻인 것처럼 넣었었음.
-   3) 추출 모드 2가지: 기존의 "문단(블록)마다 최대 N개"에 더해, "파일 전체에서 총 M개"를 새로 추가.
-      전체 모드는 문서 전체 후보 단어를 (레벨 우선순위 → 첫 등장 순서)로 정렬해서 상위 M개만 뽑는다. */
-async function buildVocabMap(blocks, sourceLang, targetLang, levelName, extractMode, countParam, onProgress, opts){
-  opts = opts || {};
-  const vocabMap = {};       // 문단 아래 불렛 목록용: blockId -> 포맷된 문자열
-  const vocabInlineMap = {}; // 본문 단어 옆 삽입용: blockId -> [{word, gloss}]
-  const vocabList = [];      // 전체 문서 기준 중복 없는 단어 목록 (단어장 파일/Anki 내보내기용)
-  if (!SUPPORTED_VOCAB_LANGS.includes(sourceLang)) return { vocabMap, vocabInlineMap, vocabList };
-  const thresholdIdx = LEVEL_ORDER.indexOf(levelName);
-  if (thresholdIdx === -1) return { vocabMap, vocabInlineMap, vocabList };
-
-  // 1단계: 네트워크 호출 없이 블록별 토큰(원형+대소문자 정보) + 문서 전체 통계를 계산
-  const perBlockTokens = blocks.map(b=> tokenizeByLang(sourceLang, b.text));
-  const wordStats = new Map(); // lower -> { level, capMidSentence, firstBlockIdx }
-  perBlockTokens.forEach((tokens, bi)=>{
-    tokens.forEach(t=>{
-      let s = wordStats.get(t.lower);
-      if (!s){
-        s = { level: getWordLevelIndex(sourceLang, t.lower), capMidSentence:false, firstBlockIdx: bi };
-        wordStats.set(t.lower, s);
-      }
-      if (isCapitalizedToken(t.raw) && !t.sentenceInitial) s.capMidSentence = true;
-    });
-  });
-
-  // 2단계: 레벨 + 고유명사(대문자 휴리스틱) 필터를 통과한 "후보 단어 풀"만 사전 조회 대상으로 삼음
-  const candidateWords = Array.from(wordStats.entries())
-    .filter(([w,s])=> s.level >= thresholdIdx && !s.capMidSentence)
-    .sort((a,b)=> a[1].firstBlockIdx - b[1].firstBlockIdx) // 등장 순서
-    .map(([w])=>w);
-
-  const entriesByWord = new Map();
-  const DICT_CONCURRENCY = 5;
-  let wIdx = 0, lookupDone = 0;
-  async function dictWorker(){
-    while (wIdx < candidateWords.length){
-      const w = candidateWords[wIdx++];
-      const cacheKey = `${sourceLang}|${targetLang}|${w}`;
-      const wasCached = _dictCache.has(cacheKey);
-      const { entries, structured } = await gdictLookup(w, sourceLang, targetLang);
-      // 🆕 구조화된 사전 항목이 없는 단어(대부분 고유명사·신조어)는 제외
-      if (structured) entriesByWord.set(w, entries);
-      lookupDone++;
-      onProgress && onProgress(lookupDone, candidateWords.length);
-      if (!wasCached) await sleep(90);
-    }
-  }
-  await Promise.all(Array.from({length: Math.min(DICT_CONCURRENCY, candidateWords.length)}, dictWorker));
-
-  // 3단계: 최종 선정 (모드별 상한 적용) — 이 시점부터는 네트워크 호출 없음
-  const eligibleWords = candidateWords.filter(w=> entriesByWord.has(w)); // 사전에 실제로 뜻이 있는 것만
-  let selectedWords;
-  if (extractMode === 'total'){
-    // 레벨 우선순위(선택 레벨 → 상위 레벨 순) → 첫 등장 순서로 정렬해서 총 개수만큼
-    const cap = Math.max(1, Math.min(2000, countParam || 100));
-    const byLevel = {};
-    eligibleWords.forEach(w=>{ const lvl = wordStats.get(w).level; (byLevel[lvl]=byLevel[lvl]||[]).push(w); });
-    selectedWords = [];
-    for (let lvl = thresholdIdx; lvl < LEVEL_ORDER.length && selectedWords.length < cap; lvl++){
-      if (byLevel[lvl]) selectedWords.push(...byLevel[lvl]);
-    }
-    selectedWords = selectedWords.slice(0, cap);
-  } else {
-    // 'perBlock': 문단마다 최대 N개, 앞서 다른 문단에서 이미 뽑힌 단어는 다시 뽑지 않음(중복 제거)
-    const cap = Math.max(1, Math.min(10, countParam || 6));
-    const usedWords = new Set();
-    selectedWords = [];
-    blocks.forEach((b, bi)=>{
-      const localCandidates = Array.from(new Set(perBlockTokens[bi].map(t=>t.lower)))
-        .filter(w=> eligibleWords.includes(w) && !usedWords.has(w))
-        .sort((a,b2)=> wordStats.get(a).level - wordStats.get(b2).level); // 선택 레벨에 가까운 것 우선
-      const picked = localCandidates.slice(0, cap);
-      picked.forEach(w=> usedWords.add(w));
-      selectedWords.push(...picked);
-    });
-  }
-
-  // 4단계: blockId별로 재조립 (list용 vocabMap/vocabInlineMap, 내보내기용 vocabList)
-  const selectedSet = new Set(selectedWords);
-  const assignedBlockOf = new Map(); // word -> blockId (첫 등장 블록에만 표시)
-  selectedWords.forEach(w=>{
-    if (!assignedBlockOf.has(w)) assignedBlockOf.set(w, blocks[wordStats.get(w).firstBlockIdx].id);
-  });
-  const byBlock = {};
-  blocks.forEach((b, bi)=>{
-    const wordsHere = Array.from(new Set(perBlockTokens[bi].map(t=>t.lower))).filter(w=> selectedSet.has(w) && assignedBlockOf.get(w)===b.id);
-    if (!wordsHere.length) return;
-    const items = wordsHere.map(w=> ({ word:w, entries: entriesByWord.get(w) }));
-    vocabMap[b.id] = formatVocabList(items);
-    vocabInlineMap[b.id] = items.map(it=> ({
-      word: it.word,
-      gloss: it.entries.map(e=>e.meanings[0]).filter(Boolean).slice(0,2).join(', ')
-    }));
-    items.forEach(it=>{
-      const listItem = { word: it.word, entries: it.entries };
-      if (opts.includeExamples){
-        listItem.exampleSrc = b.text;
-        listItem.exampleTgt = (opts.translations && opts.translations[b.id]) || '';
-      }
-      vocabList.push(listItem);
-    });
-  });
-
-  return { vocabMap, vocabInlineMap, vocabList };
-}
-function formatVocabFile(vocabList, meta){
-  const header = `[단어장] ${meta.sourceLabel} → ${meta.targetLabel} (레벨 ${meta.level} 이상, 총 ${vocabList.length}개)`;
-  const lines = vocabList.map((it,i)=>{
-    const posGroups = it.entries.map(e=> `${e.pos!=='-' ? '('+e.pos+') ' : ''}${e.meanings.join(', ')}`).join(' / ');
-    let block = `${i+1}. ${it.word} — ${posGroups}`;
-    if (it.exampleSrc){
-      block += `\n   예) ${it.exampleSrc}`;
-      if (it.exampleTgt) block += `\n       → ${it.exampleTgt}`;
-    }
-    return block;
-  });
-  return [header, '', ...lines].join('\n');
-}
-/* ---- Anki .apkg 내보내기 (🆕 이번 대화: tsv → 실제 .apkg 파일) ----
-   기존엔 tsv 텍스트를 만들어서 "Anki에서 File > Import로 가져오라"고 안내했는데,
-   사용자가 직접 노트 타입을 만들고 필드를 매핑해야 하는 번거로움이 있었음.
-   이제 sql.js(WASM SQLite)로 Anki의 실제 컬렉션 DB 스키마(collection.anki2)를 만들고,
-   JSZip으로 media 파일과 함께 묶어서 더블클릭 한 번으로 들어가는 .apkg를 직접 생성한다.
-   노트 타입(Front/Back[/Example])도 apkg 안에 함께 정의해서 내보내므로 Anki 쪽에서
-   별도로 필드를 만들 필요가 없다.
-   ⚠️ 뒷면(Back)에는 "뜻"만 넣는다 — 예문은 절대 Back에 섞지 않고, 예문이 있는 단어에
-   한해 별도의 Example 필드에 넣는다 (사용자 요청). 예문이 없는 단어는 그 필드를 비워둔다.
-   ⚠️ 이 샌드박스 환경은 sql.js를 CDN에서 받아올 네트워크가 없어 브라우저 실사용 테스트를
-   하지 못했음 (스키마/데이터 모델 자체는 Node의 node:sqlite로 별도 검증함 — 5장 참고).
-   다음 세션에서 최우선으로 실제 Anki 가져오기까지 확인할 것. ---- */
-let _sqlJsPromise = null;
-function getSqlJs(){
-  if (!_sqlJsPromise){
-    _sqlJsPromise = initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
-  }
-  return _sqlJsPromise;
-}
-function ankiPlain(s){ return String(s||'').replace(/\r\n|\r|\n/g,' ').trim(); }
-async function fieldChecksum32(sfld){
-  // Anki는 sfld(정렬 필드)의 sha1 앞 32비트를 csum으로 저장한다. Web Crypto로 계산.
-  const enc = new TextEncoder().encode(sfld);
-  const hashBuf = await crypto.subtle.digest('SHA-1', enc);
-  const hashArr = new Uint8Array(hashBuf);
-  return (hashArr[0]<<24 | hashArr[1]<<16 | hashArr[2]<<8 | hashArr[3]) >>> 0;
-}
-async function buildAnkiApkg(vocabList, includeExamples, meta){
-  const SQL = await getSqlJs();
-  const db = new SQL.Database();
-  db.run(`
-    CREATE TABLE col (id integer PRIMARY KEY, crt integer NOT NULL, mod integer NOT NULL, scm integer NOT NULL,
-      ver integer NOT NULL, dty integer NOT NULL, usn integer NOT NULL, ls integer NOT NULL,
-      conf text NOT NULL, models text NOT NULL, decks text NOT NULL, dconf text NOT NULL, tags text NOT NULL);
-    CREATE TABLE notes (id integer PRIMARY KEY, guid text NOT NULL, mid integer NOT NULL, mod integer NOT NULL,
-      usn integer NOT NULL, tags text NOT NULL, flds text NOT NULL, sfld text NOT NULL, csum integer NOT NULL,
-      flags integer NOT NULL, data text NOT NULL);
-    CREATE TABLE cards (id integer PRIMARY KEY, nid integer NOT NULL, did integer NOT NULL, ord integer NOT NULL,
-      mod integer NOT NULL, usn integer NOT NULL, type integer NOT NULL, queue integer NOT NULL, due integer NOT NULL,
-      ivl integer NOT NULL, factor integer NOT NULL, reps integer NOT NULL, lapses integer NOT NULL, left integer NOT NULL,
-      odue integer NOT NULL, odid integer NOT NULL, flags integer NOT NULL, data text NOT NULL);
-    CREATE TABLE revlog (id integer PRIMARY KEY, cid integer NOT NULL, usn integer NOT NULL, ease integer NOT NULL,
-      ivl integer NOT NULL, lastIvl integer NOT NULL, factor integer NOT NULL, time integer NOT NULL, type integer NOT NULL);
-    CREATE TABLE graves (usn integer NOT NULL, oid integer NOT NULL, type integer NOT NULL);
-    CREATE INDEX ix_notes_usn on notes (usn);
-    CREATE INDEX ix_cards_usn on cards (usn);
-    CREATE INDEX ix_revlog_usn on revlog (usn);
-    CREATE INDEX ix_cards_nid on cards (nid);
-    CREATE INDEX ix_cards_sched on cards (did, queue, due);
-    CREATE INDEX ix_notes_csum on notes (csum);
-  `);
-
-  const nowSec = Math.floor(Date.now()/1000);
-  const modelId = Date.now();
-  const deckId = Date.now()+1;
-  const fieldNames = includeExamples ? ['Front','Back','Example'] : ['Front','Back'];
-  const afmt = includeExamples
-    ? '{{FrontSide}}<hr id="answer">{{Back}}{{#Example}}<hr><div style="font-size:15px;color:#666">{{Example}}</div>{{/Example}}'
-    : '{{FrontSide}}<hr id="answer">{{Back}}';
-  const model = {
-    id: modelId, name: `번역기 단어장 (${meta.sourceLabel}→${meta.targetLabel})`,
-    type:0, mod:nowSec, usn:-1, sortf:0, did:deckId,
-    tmpls:[{ name:'Card 1', ord:0, qfmt:'{{Front}}', afmt, bqfmt:'', bafmt:'', did:null, bfont:'', bsize:0 }],
-    flds: fieldNames.map((n,i)=>({ name:n, ord:i, sticky:false, rtl:false, font:'Arial', size:20, media:[] })),
-    css:'.card { font-family: Arial; font-size: 20px; text-align: center; color: black; background-color: white; }',
-    latexPre:'\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n',
-    latexPost:'\\end{document}', latexsvg:false, req:[[0,'any',[0]]]
-  };
-  const models = { [modelId]: model };
-  const deckName = meta.deckName || `번역기 단어장 (${meta.sourceLabel}→${meta.targetLabel})`;
-  const defaultDeck = { id:1, name:'Default', extendRev:50, usn:-1, collapsed:false, newToday:[0,0], revToday:[0,0], lrnToday:[0,0], timeToday:[0,0], conf:1, desc:'', dyn:0, extendNew:10 };
-  const decks = { '1': defaultDeck, [deckId]: { id:deckId, name:deckName, extendRev:50, usn:-1, collapsed:false, newToday:[0,0], revToday:[0,0], lrnToday:[0,0], timeToday:[0,0], conf:1, desc:'', dyn:0, extendNew:10 } };
-  const dconf = { '1': { id:1, name:'Default', replayq:true, lapse:{delays:[10],leechFails:8,minInt:1,leechAction:0,mult:0}, rev:{perDay:100,fuzz:0.05,ivlFct:1,maxIvl:36500,ease4:1.3,bury:false,minSpace:1}, timer:0, maxTaken:60, usn:0, new:{delays:[1,10],ints:[1,4,7],initialFactor:2500,perDay:20,order:1,bury:false,separate:true}, mod:0, autoplay:true } };
-  const conf = { curDeck:deckId, activeDecks:[deckId], newSpread:0, collapseTime:1200, timeLim:0, estTimes:true, dueCounts:true, curModel:String(modelId), nextPos:1, sortType:'noteFld', sortBackwards:false, addToCur:true, dayLearnFirst:false };
-
-  db.run(`INSERT INTO col VALUES (1,?,?,?,11,0,0,0,?,?,?,?,'{}')`, [
-    nowSec, Date.now(), Date.now(), JSON.stringify(conf), JSON.stringify(models), JSON.stringify(decks), JSON.stringify(dconf)
-  ]);
-
-  let nid = Date.now()*1000;
-  let cid = Date.now()*1000 + 1;
-  for (let idx=0; idx<vocabList.length; idx++){
-    const it = vocabList[idx];
-    const meaning = it.entries.map(e=> `${e.pos!=='-' ? '('+e.pos+') ' : ''}${escapeHtml(e.meanings.join(', '))}`).join('<br>');
-    const front = escapeHtml(ankiPlain(it.word));
-    const fields = [front, meaning];
-    if (includeExamples){
-      let example = '';
-      if (it.exampleSrc){
-        example = `<i>${escapeHtml(ankiPlain(it.exampleSrc))}</i>` + (it.exampleTgt ? `<br>→ ${escapeHtml(ankiPlain(it.exampleTgt))}` : '');
-      }
-      fields.push(example);
-    }
-    const flds = fields.join('\x1f');
-    const sfld = ankiPlain(it.word);
-    const guid = `tr_${idx}_${sfld}`;
-    const csum = await fieldChecksum32(sfld);
-    nid++; cid++;
-    db.run(`INSERT INTO notes VALUES (?,?,?,?,-1,'',?,?,?,0,'')`, [nid, guid, modelId, nowSec, flds, sfld, csum]);
-    db.run(`INSERT INTO cards VALUES (?,?,?,0,?,-1,0,0,?,0,0,0,0,0,0,0,0,'')`, [cid, nid, deckId, nowSec, idx+1]);
-  }
-
-  const dbBytes = db.export();
-  db.close();
-
-  const zip = new JSZip();
-  zip.file('collection.anki2', dbBytes);
-  zip.file('media', '{}');
-  return await zip.generateAsync({ type:'blob' });
 }
 
 /* ================= State ================= */
@@ -725,16 +344,6 @@ function newSlot(seed){
     source: seed?seed.source:'auto',
     target: seed?seed.target:'ko',
     position: seed?seed.position:'below',
-    vocabEnabled: seed?!!seed.vocabEnabled:false,
-    vocabLevel: seed?seed.vocabLevel:'B1',
-    vocabMaxWords: seed?(seed.vocabMaxWords||6):6,
-    vocabExtractMode: seed?(seed.vocabExtractMode||'perBlock'):'perBlock', // 🆕 'perBlock' | 'total'
-    vocabTotalWords: seed?(seed.vocabTotalWords||100):100, // 🆕 vocabExtractMode==='total'일 때 문서 전체 기준 단어 개수
-    vocabDisplayMode: seed?(seed.vocabDisplayMode||'list'):'list', // 🆕 'list'(문단 아래 불렛) | 'inline'(본문 단어 옆 [뜻])
-    vocabEmbed: seed?(seed.vocabEmbed!==false):true,
-    vocabExportFile: seed?!!seed.vocabExportFile:false,
-    vocabExportExamples: seed?!!seed.vocabExportExamples:false,
-    vocabExportAnki: seed?!!seed.vocabExportAnki:false,
     glossary: seed?(seed.glossary||''):''
   };
 }
@@ -828,11 +437,7 @@ function renderFileBlockList(){
     const div = document.createElement('div');
     div.className = 'file-block' + (f.id===selectedFileId ? ' selected' : '');
     const countText = f.parseError ? `<span style="color:var(--danger)">${escapeHtml(f.parseError)}</span>` : (f.blocks ? `${f.blocks.length}개 블록` : '분석 중...');
-    const chips = f.slots.map(s=>{
-      const vocabCountLabel = s.vocabExtractMode==='total' ? `총${s.vocabTotalWords}개` : `${s.vocabMaxWords}개`;
-      const vocab = s.vocabEnabled ? `<span class="vocab-chip">📘${s.vocabLevel}+ ${vocabCountLabel}</span>` : '';
-      return `<span class="lang-chip">${langName(s.target)}</span>${vocab}`;
-    }).join('');
+    const chips = f.slots.map(s=> `<span class="lang-chip">${langName(s.target)}</span>`).join('');
     div.innerHTML = `
       <div class="fb-top">
         <span class="ext-tag">${f.ext}</span>
@@ -953,9 +558,6 @@ function renderSlotCards(container, f){
     card.className = 'slot-card';
     const sourceOpts = SOURCE_LANGS.map(([c,n])=>`<option value="${c}" ${slot.source===c?'selected':''}>${n}</option>`).join('');
     const targetOpts = LANGS.map(([c,n])=>`<option value="${c}" ${slot.target===c?'selected':''}>${n}</option>`).join('');
-    const vocabSupported = slot.source==='auto' || SUPPORTED_VOCAB_LANGS.includes(slot.source);
-    const levelOpts = LEVEL_ORDER.map(l=>`<option value="${l}" ${slot.vocabLevel===l?'selected':''}>${l} 이상</option>`).join('');
-    const countOpts = Array.from({length:10}, (_,i)=>i+1).map(n=>`<option value="${n}" ${slot.vocabMaxWords===n?'selected':''}>${n}개</option>`).join('');
     card.innerHTML = `
       <div class="slot-index">${idx+1}</div>
       <div class="slot-grid">
@@ -968,61 +570,15 @@ function renderSlotCards(container, f){
         <div class="pos-btn ${slot.position==='replace'?'active':''}" data-pos="replace">교체</div>
       </div>
       <div class="vocab-box">
-        <div class="vocab-toprow">
-          <label>📘 단어 학습 목록 추가</label>
-          <label class="switch"><input type="checkbox" class="vocab-toggle" ${slot.vocabEnabled?'checked':''} ${vocabSupported?'':'disabled'}/><span class="slider"></span></label>
-        </div>
-        <div class="vocab-level-row" style="${slot.vocabEnabled?'':'display:none'}">
-          <select class="vocab-level-select">${levelOpts}</select>
-          <select class="vocab-extract-mode-select" style="margin-left:6px;">
-            <option value="perBlock" ${slot.vocabExtractMode==='perBlock'?'selected':''}>문단별 개수 지정</option>
-            <option value="total" ${slot.vocabExtractMode==='total'?'selected':''}>전체 문서 총 개수 지정</option>
-          </select>
-        </div>
-        <div class="vocab-count-row" style="display:${(slot.vocabEnabled && slot.vocabExtractMode==='perBlock')?'block':'none'}; margin-top:4px;">
-          <select class="vocab-count-select">${countOpts}</select>
-          <span style="font-size:11.5px; color:var(--text-soft);"> · 문단(블록)마다 최대 이 개수까지</span>
-        </div>
-        <div class="vocab-total-row" style="display:${(slot.vocabEnabled && slot.vocabExtractMode==='total')?'block':'none'}; margin-top:4px;">
-          <input type="number" class="vocab-total-input textinput" min="1" max="2000" value="${slot.vocabTotalWords}" style="width:80px; display:inline-block;"/>
-          <span style="font-size:11.5px; color:var(--text-soft);"> · 파일 전체에서 이 개수만 뽑음 (첫 등장 문단에만 표시)</span>
-        </div>
-        <div class="vocab-display-row" style="display:${slot.vocabEnabled?'flex':'none'}; margin-top:6px; gap:14px; font-size:12px; align-items:center;">
-          <label>표시 방식</label>
-          <select class="vocab-display-mode-select">
-            <option value="list" ${slot.vocabDisplayMode==='list'?'selected':''}>문단 아래 목록(불렛)</option>
-            <option value="inline" ${slot.vocabDisplayMode==='inline'?'selected':''}>본문 단어 옆 [뜻] 삽입</option>
-          </select>
-        </div>
-        <div class="vocab-note-inline-warn" style="display:${(slot.vocabEnabled && slot.vocabDisplayMode==='inline')?'block':'none'}">'교체' 위치에서는 원문이 결과물에 표시되지 않아서 단어 옆에 삽입할 자리가 없어요 — 이 경우 자동으로 목록(불렛) 방식으로 대신 나갑니다.</div>
-        <div class="vocab-output-row" style="display:${slot.vocabEnabled?'flex':'none'}; margin-top:6px; gap:14px; font-size:12px; flex-wrap:wrap;">
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" class="vocab-embed-chk" ${slot.vocabEmbed?'checked':''}/> 결과물에 포함(임베드)</label>
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" class="vocab-export-chk" ${slot.vocabExportFile?'checked':''}/> 단어장 파일 별도 생성</label>
-        </div>
-        <div class="vocab-export-sub" style="display:${(slot.vocabEnabled && slot.vocabExportFile)?'block':'none'}; margin-top:4px; padding-left:2px;">
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; margin-bottom:5px;"><input type="checkbox" class="vocab-examples-chk" ${slot.vocabExportExamples?'checked':''}/> 별도 파일에 예문(원문+번역) 포함</label>
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px;"><input type="checkbox" class="vocab-anki-chk" ${slot.vocabExportAnki?'checked':''}/> Anki 카드덱(.apkg)으로도 내보내기</label>
-        </div>
-        <div class="vocab-note-lang" style="display:${(!vocabSupported || slot.vocabEnabled)?'block':'none'}">${vocabSupported ? '원문이 영어·스페인어·러시아어일 때만 적용됩니다 (자막 빈도 데이터 기반 근사 등급). 같은 단어는 문서 전체에서 한 번만 뽑히고, 고유명사로 추정되는 단어(문장 중간에서 대문자로 시작하거나 사전에 없는 단어)는 자동으로 제외됩니다.' : '이 원본 언어는 아직 단어 학습 기능을 지원하지 않아요.'}</div>
-      </div>
-      <div class="vocab-box">
         <div class="vocab-toprow"><label>🔒 고유명사·용어 고정</label></div>
         <textarea class="textinput glossary-input" rows="3" placeholder="한 줄에 하나씩, '원문=번역' 형식&#10;예) Совочка=소보치카&#10;예) Семён=세묜" style="resize:vertical; font-family:var(--mono); font-size:11.5px;">${escapeHtml(slot.glossary||'')}</textarea>
         <div class="vocab-note">같은 인물·용어가 자막마다 다르게 번역되는 문제를 막기 위해, 지정한 표현으로 결과물에서 강제 치환합니다.</div>
       </div>
       <div class="slot-footer">
-        <button class="slot-apply-all" title="이 언어쌍·위치·단어장·용어고정 설정을 업로드된 다른 모든 파일의 같은 순번 슬롯에도 동일하게 적용합니다.">⧉ 이 옵션 전체 파일에 적용</button>
+        <button class="slot-apply-all" title="이 언어쌍·위치·용어고정 설정을 업로드된 다른 모든 파일의 같은 순번 슬롯에도 동일하게 적용합니다.">⧉ 이 옵션 전체 파일에 적용</button>
         ${f.slots.length>1 ? '<button class="slot-remove">삭제</button>' : ''}
       </div>
     `;
-    const vocabLevelRow = card.querySelector('.vocab-level-row');
-    const vocabCountRow = card.querySelector('.vocab-count-row');
-    const vocabTotalRow = card.querySelector('.vocab-total-row');
-    const vocabDisplayRow = card.querySelector('.vocab-display-row');
-    const vocabNoteInlineWarn = card.querySelector('.vocab-note-inline-warn');
-    const vocabOutputRow = card.querySelector('.vocab-output-row');
-    const vocabExportSub = card.querySelector('.vocab-export-sub');
-    const vocabNoteLang = card.querySelector('.vocab-note-lang');
     card.querySelector('.glossary-input').addEventListener('input', e=>{ slot.glossary = e.target.value; });
     card.querySelector('.src-select').addEventListener('change', e=>{
       slot.source = e.target.value;
@@ -1036,46 +592,13 @@ function renderSlotCards(container, f){
         btn.classList.add('active');
       });
     });
-    card.querySelector('.vocab-toggle').addEventListener('change', e=>{
-      slot.vocabEnabled = e.target.checked;
-      vocabLevelRow.style.display = slot.vocabEnabled ? '' : 'none';
-      vocabCountRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='perBlock') ? 'block' : 'none';
-      vocabTotalRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='total') ? 'block' : 'none';
-      vocabDisplayRow.style.display = slot.vocabEnabled ? 'flex' : 'none';
-      vocabNoteInlineWarn.style.display = (slot.vocabEnabled && slot.vocabDisplayMode==='inline') ? 'block' : 'none';
-      vocabOutputRow.style.display = slot.vocabEnabled ? 'flex' : 'none';
-      vocabExportSub.style.display = (slot.vocabEnabled && slot.vocabExportFile) ? 'block' : 'none';
-      vocabNoteLang.style.display = (!vocabSupported || slot.vocabEnabled) ? 'block' : 'none';
-      renderFileBlockList();
-    });
-    card.querySelector('.vocab-level-select').addEventListener('change', e=>{ slot.vocabLevel = e.target.value; renderFileBlockList(); });
-    card.querySelector('.vocab-extract-mode-select').addEventListener('change', e=>{
-      slot.vocabExtractMode = e.target.value;
-      vocabCountRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='perBlock') ? 'block' : 'none';
-      vocabTotalRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='total') ? 'block' : 'none';
-    });
-    card.querySelector('.vocab-total-input').addEventListener('input', e=>{
-      slot.vocabTotalWords = Math.max(1, Math.min(2000, parseInt(e.target.value,10)||100));
-    });
-    card.querySelector('.vocab-display-mode-select').addEventListener('change', e=>{
-      slot.vocabDisplayMode = e.target.value;
-      vocabNoteInlineWarn.style.display = (slot.vocabEnabled && slot.vocabDisplayMode==='inline') ? 'block' : 'none';
-    });
-    card.querySelector('.vocab-count-select').addEventListener('change', e=>{ slot.vocabMaxWords = parseInt(e.target.value,10) || 6; });
-    card.querySelector('.vocab-embed-chk').addEventListener('change', e=>{ slot.vocabEmbed = e.target.checked; });
-    card.querySelector('.vocab-export-chk').addEventListener('change', e=>{
-      slot.vocabExportFile = e.target.checked;
-      vocabExportSub.style.display = (slot.vocabEnabled && slot.vocabExportFile) ? 'block' : 'none';
-    });
-    card.querySelector('.vocab-examples-chk').addEventListener('change', e=>{ slot.vocabExportExamples = e.target.checked; });
-    card.querySelector('.vocab-anki-chk').addEventListener('change', e=>{ slot.vocabExportAnki = e.target.checked; });
     const rmBtn = card.querySelector('.slot-remove');
     if (rmBtn) rmBtn.addEventListener('click', ()=>{ f.slots = f.slots.filter(s=>s.id!==slot.id); renderSlotCards(container, f); renderFileBlockList(); });
     card.querySelector('.slot-apply-all').addEventListener('click', ()=>{
       const others = uploadedFiles.filter(x=>x.id!==f.id);
       if (!others.length){ alert('적용할 다른 파일이 없습니다 (업로드된 파일이 이것 하나뿐이에요).'); return; }
       const label = `${langName(slot.source)} → ${langName(slot.target)}`;
-      if (!confirm(`이 슬롯 설정(${label}, 위치/단어장/용어고정 포함)을 업로드된 다른 파일 ${others.length}개의 ${idx+1}번째 슬롯에도 동일하게 적용할까요?\n(해당 파일의 ${idx+1}번째 슬롯 설정은 덮어써집니다.)`)) return;
+      if (!confirm(`이 슬롯 설정(${label}, 위치/용어고정 포함)을 업로드된 다른 파일 ${others.length}개의 ${idx+1}번째 슬롯에도 동일하게 적용할까요?\n(해당 파일의 ${idx+1}번째 슬롯 설정은 덮어써집니다.)`)) return;
       others.forEach(otherF=>{
         while (otherF.slots.length <= idx) otherF.slots.push(newSlot(slot));
         const keepId = otherF.slots[idx].id;
@@ -1107,18 +630,15 @@ function parseSRT(raw){
   });
   return {
     blocks,
-    rebuild: async (translations, position, embedMap, embedMode) => {
-      embedMap = embedMap || {}; embedMode = embedMode || 'list';
+    rebuild: async (translations, position) => {
       const out = entries.map(e=>{
         const translated = translations[e.id];
-        let original = e.text;
-        if (embedMode==='inline' && embedMap[e.id]) original = applyInlineGloss(original, embedMap[e.id]);
+        const original = e.text;
         let textBlock;
         if (translated===undefined) textBlock = original;
         else if (position==='replace') textBlock = translated;
         else if (position==='above') textBlock = (translated + '\n' + original).trim();
         else textBlock = (original + '\n' + translated).trim();
-        if (embedMode==='list' && embedMap[e.id]) textBlock = textBlock + '\n' + embedMap[e.id];
         return `${e.index}\n${e.time}\n${textBlock}`;
       });
       return { content: out.join('\n\n')+'\n', isBinary:false };
@@ -1148,18 +668,15 @@ function parseVTT(raw){
   });
   return {
     blocks,
-    rebuild: async (translations, position, embedMap, embedMode) => {
-      embedMap = embedMap || {}; embedMode = embedMode || 'list';
+    rebuild: async (translations, position) => {
       const body = entries.map(e=>{
         const translated = translations[e.id];
-        let original = e.text;
-        if (embedMode==='inline' && embedMap[e.id]) original = applyInlineGloss(original, embedMap[e.id]);
+        const original = e.text;
         let textBlock;
         if (translated===undefined) textBlock = original;
         else if (position==='replace') textBlock = translated;
         else if (position==='above') textBlock = (translated + '\n' + original).trim();
         else textBlock = (original + '\n' + translated).trim();
-        if (embedMode==='list' && embedMap[e.id]) textBlock = textBlock + '\n' + embedMap[e.id];
         const idLine = e.cueId ? e.cueId+'\n' : '';
         return `${idLine}${e.timeLine}\n${textBlock}`;
       }).join('\n\n');
@@ -1175,18 +692,15 @@ function parseTXT(raw){
   const blocks = paras.map((text,i)=>({id:'b'+i, text}));
   return {
     blocks,
-    rebuild: async (translations, position, embedMap, embedMode) => {
-      embedMap = embedMap || {}; embedMode = embedMode || 'list';
+    rebuild: async (translations, position) => {
       const out = blocks.map(b=>{
         const translated = translations[b.id];
-        let original = b.text;
-        if (embedMode==='inline' && embedMap[b.id]) original = applyInlineGloss(original, embedMap[b.id]);
+        const original = b.text;
         let piece;
         if (translated===undefined) piece = original;
         else if (position==='replace') piece = translated;
         else if (position==='above') piece = translated+'\n'+original;
         else piece = original+'\n'+translated;
-        if (embedMode==='list' && embedMap[b.id]) piece = piece + '\n' + embedMap[b.id];
         return piece;
       });
       return { content: out.join('\n\n')+'\n', isBinary:false };
@@ -1243,15 +757,12 @@ async function parseEPUB(raw){
 
   return {
     blocks,
-    rebuild: async (translations, position, embedMap, embedMode) => {
-      embedMap = embedMap || {}; embedMode = embedMode || 'list';
+    rebuild: async (translations, position) => {
       const outZip = await JSZip.loadAsync(raw);
       const serializer = new XMLSerializer();
       for (const entry of fileEntries){
         entry.elMap.forEach(({id, el})=>{
-          if (embedMode==='inline' && embedMap[id]) el.textContent = applyInlineGloss(el.textContent, embedMap[id]);
           const translated = translations[id];
-          let refNode = el;
           if (translated!==undefined){
             if (position==='replace'){
               el.textContent = translated;
@@ -1262,18 +773,7 @@ async function parseEPUB(raw){
               clone.textContent = translated;
               if (position==='above') el.parentNode.insertBefore(clone, el);
               else el.parentNode.insertBefore(clone, el.nextSibling);
-              refNode = clone;
             }
-          }
-          if (embedMode==='list' && embedMap[id]){
-            const vDiv = el.ownerDocument.createElement('div');
-            vDiv.setAttribute('class','vocab-block');
-            embedMap[id].split('\n').forEach((line, li)=>{
-              const p = el.ownerDocument.createElement('p');
-              p.textContent = line;
-              vDiv.appendChild(p);
-            });
-            refNode.parentNode.insertBefore(vDiv, refNode.nextSibling);
           }
         });
         let serialized = serializer.serializeToString(entry.dom);
@@ -1535,18 +1035,16 @@ async function parseFB2(raw){
   chapters.forEach((c,i)=>{ if (!c._drop) idxMap.set(i, kept.indexOf(c)); });
   kept.forEach(c=>{ c.parentIndex = c.parentIndex===-1 ? -1 : idxMap.get(c.parentIndex); });
 
-  function renderNodesToXhtmlParts(nodes, translations, position, embedMap, embedMode){
+  function renderNodesToXhtmlParts(nodes, translations, position){
     const wrap = (t, cls) => `<p class="${cls}">${escapeHtml(t)}</p>`;
     function renderBlockPair(id, cls){
-      let original = blocksById.get(id) || '';
+      const original = blocksById.get(id) || '';
       const translated = translations[id];
-      if (embedMode==='inline' && embedMap[id]) original = applyInlineGloss(original, embedMap[id]);
       const out = [];
       if (translated===undefined){ out.push(wrap(original, cls+' orig')); }
       else if (position==='replace') out.push(wrap(translated, cls+' tr'));
       else if (position==='above'){ out.push(wrap(translated, cls+' tr')); out.push(wrap(original, cls+' orig')); }
       else { out.push(wrap(original, cls+' orig')); out.push(wrap(translated, cls+' tr')); }
-      if (embedMode==='list' && embedMap[id]) embedMap[id].split('\n').forEach(line=> out.push(wrap(line,'vocab')));
       return out;
     }
     const parts = [];
@@ -1568,7 +1066,7 @@ async function parseFB2(raw){
 
   /* 🆕 "FB2 유지(번역만)" 출력 모드: 원본 XML을 복제해서 data-blk 태그가 붙은 요소만 텍스트를
      교체/추가한다. 이미지·바이너리·챕터 구조는 원본 그대로라 애초에 유실될 일이 없다. */
-  function rebuildFb2Passthrough(translations, position, embedMap, embedMode){
+  function rebuildFb2Passthrough(translations, position){
     const clone = dom.cloneNode(true);
     const ns = clone.documentElement.namespaceURI;
     // 🆕 el.textContent = '...' 는 nested 자식(예: <p> 안에 중첩된 <image> 삽화)까지 통째로
@@ -1581,10 +1079,9 @@ async function parseFB2(raw){
     clone.querySelectorAll('[data-blk]').forEach(el=>{
       const id = el.getAttribute('data-blk');
       el.removeAttribute('data-blk');
-      let original = blocksById.get(id) || '';
+      const original = blocksById.get(id) || '';
       const translated = translations[id];
       const tag = fb2LocalName(el);
-      if (embedMode==='inline' && embedMap[id]) original = applyInlineGloss(original, embedMap[id]);
       const makeLike = (text) => { const e = clone.createElementNS(ns, tag==='title'?'p':tag); e.textContent = text; return e; };
       if (tag==='title'){
         Array.from(el.children).forEach(c=> el.removeChild(c));
@@ -1598,14 +1095,6 @@ async function parseFB2(raw){
       else if (position==='replace'){ setTextPreservingChildren(el, translated); }
       else if (position==='above'){ setTextPreservingChildren(el, original); el.parentNode.insertBefore(makeLike(translated), el); }
       else { setTextPreservingChildren(el, original); el.parentNode.insertBefore(makeLike(translated), el.nextSibling); }
-      if (embedMode==='list' && embedMap[id]){
-        let ref = el;
-        embedMap[id].split('\n').forEach(line=>{
-          const p = makeLike(line);
-          ref.parentNode.insertBefore(p, ref.nextSibling);
-          ref = p;
-        });
-      }
     });
     const xml = new XMLSerializer().serializeToString(clone);
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
@@ -1613,14 +1102,14 @@ async function parseFB2(raw){
 
   return {
     blocks,
-    rebuild: async (translations, position, embedMap, embedMode, format) => {
-      embedMap = embedMap || {}; embedMode = embedMode || 'list'; format = format || 'epub';
+    rebuild: async (translations, position, format) => {
+      format = format || 'epub';
       if (format === 'fb2'){
-        const xml = rebuildFb2Passthrough(translations, position, embedMap, embedMode);
+        const xml = rebuildFb2Passthrough(translations, position);
         return { content: xml, isBinary:false };
       }
       const chapterFiles = kept.map(chap=>{
-        const parts = renderNodesToXhtmlParts(chap.nodes, translations, position, embedMap, embedMode);
+        const parts = renderNodesToXhtmlParts(chap.nodes, translations, position);
         const xhtml = `<?xml version="1.0" encoding="utf-8"?>\n<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"/><title>${escapeHtml(chap.title)}</title></head><body>${parts.join('\n')}</body></html>`;
         return { title: chap.title, xhtml, parentIndex: chap.parentIndex };
       });
@@ -1967,7 +1456,7 @@ async function runTranslation(files){
       setStatus(`${tag} 번역 준비 중...`);
       try{
         const chunkOpts = resolveChunkOpts(file.ext, advancedOpts.enabled ? advancedOpts : null);
-        const { translations, detectedSource } = await translateBlocks(parsed.blocks, slot.source, slot.target, (d,t)=> setStatus(`${tag} 진행: ${d}/${t}`), chunkOpts);
+        const { translations } = await translateBlocks(parsed.blocks, slot.source, slot.target, (d,t)=> setStatus(`${tag} 진행: ${d}/${t}`), chunkOpts);
 
         const glossaryPairs = parseGlossary(slot.glossary);
         if (glossaryPairs.length){
@@ -1979,26 +1468,7 @@ async function runTranslation(files){
           Object.keys(translations).forEach(id=>{ translations[id] = tryNarrativeStyle(translations[id]); });
         }
 
-        let vocabMap = {}, vocabInlineMap = {}, vocabList = [];
-        if (slot.vocabEnabled){
-          const effectiveSource = slot.source === 'auto' ? detectedSource : slot.source;
-          if (effectiveSource && SUPPORTED_VOCAB_LANGS.includes(effectiveSource)){
-            setStatus(`${tag} 단어장 생성 중...`);
-            const countParam = slot.vocabExtractMode==='total' ? slot.vocabTotalWords : slot.vocabMaxWords;
-            const built = await buildVocabMap(parsed.blocks, effectiveSource, slot.target, slot.vocabLevel, slot.vocabExtractMode, countParam, (d,t)=> setStatus(`${tag} 단어장: 사전조회 ${d}/${t} (고유 단어 기준)`), {
-              includeExamples: !!(slot.vocabExportFile && slot.vocabExportExamples),
-              translations
-            });
-            vocabMap = built.vocabMap; vocabInlineMap = built.vocabInlineMap; vocabList = built.vocabList;
-          } else {
-            appendLog(`⚠️ ${tag}: 단어장은 영어/스페인어/러시아어 원문에서만 지원되어 건너뜁니다 (감지된 언어: ${effectiveSource||'알수없음'}).`);
-          }
-        }
-
-        // 🆕 '교체' 위치는 원문이 결과물에 없어서 인라인 삽입 자리가 없음 → 자동으로 목록(list) 방식으로 대체
-        const effectiveVocabDisplay = (slot.vocabDisplayMode==='inline' && slot.position!=='replace') ? 'inline' : 'list';
-        const embedVocabMap = slot.vocabEmbed ? (effectiveVocabDisplay==='inline' ? vocabInlineMap : vocabMap) : {};
-        const { content, isBinary } = await parsed.rebuild(translations, slot.position, embedVocabMap, effectiveVocabDisplay, file.fb2OutputFormat || 'epub');
+        const { content, isBinary } = await parsed.rebuild(translations, slot.position, file.fb2OutputFormat || 'epub');
         const outExt = (file.ext === 'fb2') ? (file.fb2OutputFormat==='fb2' ? 'fb2' : 'epub') : file.ext;
         const outName = `${file.outputBaseName}${file.addLangSuffix ? '_'+slot.target : ''}.${outExt}`;
         zip.file(outName, content);
@@ -2006,41 +1476,6 @@ async function runTranslation(files){
         const url = URL.createObjectURL(blobForLink);
         resultItems.push({ name: outName, url });
         appendLog(`✅ ${outName} 생성 완료 (${parsed.blocks.length}개 블록)`);
-
-        if (slot.vocabEnabled && slot.vocabExportFile && vocabList.length){
-          const vocabContent = formatVocabFile(vocabList, {
-            sourceLabel: langName(slot.source==='auto' ? (detectedSource||'auto') : slot.source),
-            targetLabel: langName(slot.target),
-            level: slot.vocabLevel
-          });
-          const vocabName = `${file.outputBaseName}_${slot.target}_단어장.txt`;
-          zip.file(vocabName, vocabContent);
-          const vocabBlob = new Blob([vocabContent], {type:'text/plain;charset=utf-8'});
-          const vocabUrl = URL.createObjectURL(vocabBlob);
-          resultItems.push({ name: vocabName, url: vocabUrl });
-          appendLog(`📘 ${vocabName} 생성 완료 (${vocabList.length}개 단어)`);
-
-          if (slot.vocabExportAnki){
-            setStatus(`${tag} Anki 카드덱(.apkg) 생성 중...`);
-            try{
-              const includeEx = !!slot.vocabExportExamples;
-              const ankiBlob = await buildAnkiApkg(vocabList, includeEx, {
-                sourceLabel: langName(slot.source==='auto' ? (detectedSource||'auto') : slot.source),
-                targetLabel: langName(slot.target),
-                deckName: `${file.outputBaseName} (${slot.target})`
-              });
-              const ankiName = `${file.outputBaseName}_${slot.target}_단어장.apkg`;
-              zip.file(ankiName, ankiBlob);
-              const ankiUrl = URL.createObjectURL(ankiBlob);
-              resultItems.push({ name: ankiName, url: ankiUrl });
-              appendLog(`🗂️ ${ankiName} 생성 완료 (더블클릭하거나 Anki에서 File > Import로 바로 가져오기 가능. 뒷면엔 뜻만, 예문은 별도 Example 필드${includeEx ? '' : ' — 이번엔 예문 미포함이라 필드 생략'})`);
-            } catch(e){
-              appendLog(`❌ ${tag} Anki 카드덱(.apkg) 생성 실패: ${e.message}`);
-            }
-          }
-        } else if (slot.vocabEnabled && slot.vocabExportFile){
-          appendLog(`⚠️ ${tag}: 단어장에 담을 단어가 없어 별도 파일을 만들지 않았습니다.`);
-        }
         job.status = 'done';
       } catch(e){
         appendLog(`❌ ${tag} 번역 실패: ${e.message}`);
