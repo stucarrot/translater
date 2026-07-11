@@ -148,6 +148,8 @@
   .vocab-level-row{ display:flex; align-items:center; gap:8px; }
   .vocab-level-row select{ flex:1; }
   .vocab-note{ font-size:10.5px; color: var(--text-faint); line-height:1.5; margin-top:6px; }
+  .position-row-wrap.disabled .position-row{ opacity:0.4; pointer-events:none; }
+  .vocab-only-note{ display:none; margin:0 0 10px; }
   .slot-footer{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
   .slot-remove{ background:none; border:none; color: var(--text-faint); font-size:11px; cursor:pointer; font-family: var(--mono); }
   .slot-remove:hover{ color: var(--danger); }
@@ -334,7 +336,7 @@ function langName(code){
 
 /* ================= Vocabulary level engine ================= */
 const SUPPORTED_VOCAB_LANGS = ['en','es','ru'];
-const LEVEL_ORDER = ['A1','A2','B1','B2','C1'];
+const LEVEL_ORDER = ['A1','A2','B1','B2','C1','C2']; // 🆕 C2 추가: 빈도 데이터에 아예 없는(가장 희귀한) 단어를 C1과 구분해서 최상위로 분류
 const POS_KR = {
   noun:'명사', verb:'동사', adjective:'형용사', adverb:'부사', pronoun:'대명사',
   preposition:'전치사', conjunction:'접속사', interjection:'감탄사', determiner:'한정사',
@@ -356,7 +358,7 @@ function getVocabLevelMap(lang){
 function getWordLevelIndex(lang, word){
   const map = getVocabLevelMap(lang);
   if (map.has(word)) return map.get(word);
-  return LEVEL_ORDER.length - 1; // not in top-frequency list => treat as most advanced tier
+  return LEVEL_ORDER.length - 1; // not in top-frequency list => treat as most advanced tier (🆕 이제 C2)
 }
 function tokenizeByLang(lang, text){
   // 🆕 이번 대화: 원형(대소문자 유지)과 "문장 중간에서 대문자로 시작했는지" 여부까지 함께 반환하도록 확장.
@@ -383,6 +385,23 @@ function isCapitalizedToken(raw){
   return raw.length>0 && raw[0] === raw[0].toUpperCase() && raw[0] !== raw[0].toLowerCase();
 }
 function escapeRegExpLiteral(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+/* 🆕 예문 추출용 문장 분리기. 단락(블록) 텍스트를 마침표/느낌표/물음표/말줄임표 기준으로 문장 단위로
+   쪼갠다. 완벽한 문장 경계 감지는 아니지만(예: "Mr." 같은 약어), 예문을 "단락 전체"가 아니라
+   "그 단어가 실제로 포함된 문장 하나"로 좁히는 목적에는 충분하다. */
+function splitSentences(text){
+  if (!text) return [];
+  const parts = text.match(/[^.!?…]+[.!?…]+(?=\s|$)|[^.!?…]+$/g);
+  return parts ? parts.map(s=>s.trim()).filter(Boolean) : [text.trim()];
+}
+/* 🆕 텍스트 안에서 특정 단어(대소문자 무시, 단어 경계 기준)가 포함된 문장 하나만 뽑아 반환.
+   못 찾으면(토큰화 방식 차이 등으로 드물게 발생) 텍스트 전체를 그대로 폴백으로 둔다. */
+function extractContainingSentence(text, word){
+  const sentences = splitSentences(text);
+  if (!sentences.length) return text;
+  const re = new RegExp(`(^|[^\\p{L}\\p{N}_])${escapeRegExpLiteral(word)}(?![\\p{L}\\p{N}_])`, 'iu');
+  const idx = sentences.findIndex(s=> re.test(s));
+  return { sentence: idx>=0 ? sentences[idx] : text, index: idx, total: sentences.length };
+}
 /* 🆕 본문 단어 옆에 [뜻]을 직접 삽입하는 모드용 헬퍼. 대소문자 무시, 단어 경계(앞뒤가 글자/숫자가
    아님) 기준으로 첫 등장 위치 하나에만 삽입한다. */
 function applyInlineGloss(text, items){
@@ -551,12 +570,41 @@ async function buildVocabMap(blocks, sourceLang, targetLang, levelName, extractM
     items.forEach(it=>{
       const listItem = { word: it.word, entries: it.entries };
       if (opts.includeExamples){
-        listItem.exampleSrc = b.text;
-        listItem.exampleTgt = (opts.translations && opts.translations[b.id]) || '';
+        // 🆕 단락 전체가 아니라 그 단어가 실제로 들어있는 문장 하나만 예문으로 뽑는다.
+        const { sentence: exampleSrc, index: sentIdx, total: srcSentCount } = extractContainingSentence(b.text, it.word);
+        listItem.exampleSrc = exampleSrc;
+        const tgtFull = (opts.translations && opts.translations[b.id]) || '';
+        if (tgtFull){
+          // 번역문도 같은 방식으로 문장 분리해서, 문장 개수가 원문과 같을 때만(안전할 때만)
+          // 같은 인덱스의 문장을 대응시킨다. 개수가 다르면(구글 번역이 문장을 합치거나 나눈 경우)
+          // 잘못 대응될 위험이 있어 문단 번역 전체를 그대로 폴백으로 남긴다.
+          const tgtSentences = splitSentences(tgtFull);
+          listItem.exampleTgt = (sentIdx>=0 && tgtSentences.length===srcSentCount) ? tgtSentences[sentIdx] : tgtFull;
+        } else {
+          listItem.exampleTgt = ''; // 🆕 '번역 없이 단어장만' 모드 등, 문단 전체 번역이 없는 경우 → 아래 5단계에서 문장만 개별 번역해서 채움
+        }
       }
       vocabList.push(listItem);
     });
   });
+
+  // 🆕 5단계: 본문을 통째로 번역하지 않은 경우(예: '번역 없이 단어장만' 모드), 예문 포함이
+  // 켜져 있으면 선택된 예문 문장들만 개별적으로 번역해서 채운다 (문서 전체 번역보다 훨씬 적은 호출량).
+  if (opts.includeExamples && !opts.translations && vocabList.length){
+    let vIdx = 0;
+    async function exampleTranslateWorker(){
+      while (vIdx < vocabList.length){
+        const it = vocabList[vIdx++];
+        if (!it.exampleSrc) continue;
+        try{
+          const { translated } = await gtranslateRaw(it.exampleSrc, sourceLang, targetLang);
+          it.exampleTgt = translated;
+        } catch(e){ /* 실패하면 빈 값으로 남김 */ }
+        await sleep(60);
+      }
+    }
+    await Promise.all(Array.from({length: Math.min(5, vocabList.length)}, exampleTranslateWorker));
+  }
 
   return { vocabMap, vocabInlineMap, vocabList };
 }
@@ -628,9 +676,10 @@ async function buildAnkiApkg(vocabList, includeExamples, meta){
   const nowSec = Math.floor(Date.now()/1000);
   const modelId = Date.now();
   const deckId = Date.now()+1;
-  const fieldNames = includeExamples ? ['Front','Back','Example'] : ['Front','Back'];
+  // 🆕 예문 번역을 Example과 같은 필드에 합치지 않고 별도의 ExampleTranslation 필드로 분리
+  const fieldNames = includeExamples ? ['Front','Back','Example','ExampleTranslation'] : ['Front','Back'];
   const afmt = includeExamples
-    ? '{{FrontSide}}<hr id="answer">{{Back}}{{#Example}}<hr><div style="font-size:15px;color:#666">{{Example}}</div>{{/Example}}'
+    ? '{{FrontSide}}<hr id="answer">{{Back}}{{#Example}}<hr><div style="font-size:15px;color:#666">{{Example}}</div>{{/Example}}{{#ExampleTranslation}}<div style="font-size:14px;color:#999;margin-top:4px">{{ExampleTranslation}}</div>{{/ExampleTranslation}}'
     : '{{FrontSide}}<hr id="answer">{{Back}}';
   const model = {
     id: modelId, name: `번역기 단어장 (${meta.sourceLabel}→${meta.targetLabel})`,
@@ -660,11 +709,10 @@ async function buildAnkiApkg(vocabList, includeExamples, meta){
     const front = escapeHtml(ankiPlain(it.word));
     const fields = [front, meaning];
     if (includeExamples){
-      let example = '';
-      if (it.exampleSrc){
-        example = `<i>${escapeHtml(ankiPlain(it.exampleSrc))}</i>` + (it.exampleTgt ? `<br>→ ${escapeHtml(ankiPlain(it.exampleTgt))}` : '');
-      }
-      fields.push(example);
+      // 🆕 예문 원문(Example)과 예문 번역(ExampleTranslation)을 서로 다른 필드에 넣는다 — 절대 섞지 않음
+      const example = it.exampleSrc ? `<i>${escapeHtml(ankiPlain(it.exampleSrc))}</i>` : '';
+      const exampleTranslation = it.exampleTgt ? escapeHtml(ankiPlain(it.exampleTgt)) : '';
+      fields.push(example, exampleTranslation);
     }
     const flds = fields.join('\x1f');
     const sfld = ankiPlain(it.word);
@@ -732,7 +780,8 @@ function newSlot(seed){
     vocabTotalWords: seed?(seed.vocabTotalWords||100):100, // 🆕 vocabExtractMode==='total'일 때 문서 전체 기준 단어 개수
     vocabDisplayMode: seed?(seed.vocabDisplayMode||'list'):'list', // 🆕 'list'(문단 아래 불렛) | 'inline'(본문 단어 옆 [뜻])
     vocabEmbed: seed?(seed.vocabEmbed!==false):true,
-    vocabExportFile: seed?!!seed.vocabExportFile:false,
+    vocabOnlyMode: seed?!!seed.vocabOnlyMode:false, // 🆕 본문 번역 없이 단어장만 생성
+    vocabExportTxt: seed?!!seed.vocabExportTxt:false, // 🆕 이전의 vocabExportFile을 대체 (자동 내보내기 없앰 — 명시적으로 체크해야 생성됨)
     vocabExportExamples: seed?!!seed.vocabExportExamples:false,
     vocabExportAnki: seed?!!seed.vocabExportAnki:false,
     glossary: seed?(seed.glossary||''):''
@@ -830,7 +879,7 @@ function renderFileBlockList(){
     const countText = f.parseError ? `<span style="color:var(--danger)">${escapeHtml(f.parseError)}</span>` : (f.blocks ? `${f.blocks.length}개 블록` : '분석 중...');
     const chips = f.slots.map(s=>{
       const vocabCountLabel = s.vocabExtractMode==='total' ? `총${s.vocabTotalWords}개` : `${s.vocabMaxWords}개`;
-      const vocab = s.vocabEnabled ? `<span class="vocab-chip">📘${s.vocabLevel}+ ${vocabCountLabel}</span>` : '';
+      const vocab = s.vocabEnabled ? `<span class="vocab-chip">📘${s.vocabLevel}+ ${vocabCountLabel}${s.vocabOnlyMode?' 단어장만':''}</span>` : '';
       return `<span class="lang-chip">${langName(s.target)}</span>${vocab}`;
     }).join('');
     div.innerHTML = `
@@ -962,15 +1011,22 @@ function renderSlotCards(container, f){
         <select class="src-select">${sourceOpts}</select>
         <select class="tgt-select">${targetOpts}</select>
       </div>
-      <div class="position-row">
-        <div class="pos-btn ${slot.position==='below'?'active':''}" data-pos="below">아래</div>
-        <div class="pos-btn ${slot.position==='above'?'active':''}" data-pos="above">위</div>
-        <div class="pos-btn ${slot.position==='replace'?'active':''}" data-pos="replace">교체</div>
+      <div class="position-row-wrap">
+        <div class="position-row">
+          <div class="pos-btn ${slot.position==='below'?'active':''}" data-pos="below">아래</div>
+          <div class="pos-btn ${slot.position==='above'?'active':''}" data-pos="above">위</div>
+          <div class="pos-btn ${slot.position==='replace'?'active':''}" data-pos="replace">교체</div>
+        </div>
+        <div class="vocab-note vocab-only-note">'번역 없이 단어장만 생성'이 켜져 있어서 본문 결과 파일은 만들지 않고, 이 위치 설정은 사용되지 않습니다.</div>
       </div>
       <div class="vocab-box">
         <div class="vocab-toprow">
           <label>📘 단어 학습 목록 추가</label>
           <label class="switch"><input type="checkbox" class="vocab-toggle" ${slot.vocabEnabled?'checked':''} ${vocabSupported?'':'disabled'}/><span class="slider"></span></label>
+        </div>
+        <div class="vocab-onlymode-row toggle-row" style="${slot.vocabEnabled?'':'display:none'}; margin-bottom:8px;">
+          <label style="font-size:12.5px;">🆕 번역 없이 단어장만 생성</label>
+          <label class="switch"><input type="checkbox" class="vocab-onlymode-chk" ${slot.vocabOnlyMode?'checked':''}/><span class="slider"></span></label>
         </div>
         <div class="vocab-level-row" style="${slot.vocabEnabled?'':'display:none'}">
           <select class="vocab-level-select">${levelOpts}</select>
@@ -987,21 +1043,26 @@ function renderSlotCards(container, f){
           <input type="number" class="vocab-total-input textinput" min="1" max="2000" value="${slot.vocabTotalWords}" style="width:80px; display:inline-block;"/>
           <span style="font-size:11.5px; color:var(--text-soft);"> · 파일 전체에서 이 개수만 뽑음 (첫 등장 문단에만 표시)</span>
         </div>
-        <div class="vocab-display-row" style="display:${slot.vocabEnabled?'flex':'none'}; margin-top:6px; gap:14px; font-size:12px; align-items:center;">
+        <div class="vocab-output-row" style="display:none; margin-top:6px; gap:14px; font-size:12px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" class="vocab-embed-chk" ${slot.vocabEmbed?'checked':''}/> 결과물에 포함(임베드)</label>
+        </div>
+        <!-- 🆕 표시 방식은 '임베드'가 체크됐을 때만 노출 -->
+        <div class="vocab-display-row" style="display:none; margin-top:6px; gap:14px; font-size:12px; align-items:center;">
           <label>표시 방식</label>
           <select class="vocab-display-mode-select">
             <option value="list" ${slot.vocabDisplayMode==='list'?'selected':''}>문단 아래 목록(불렛)</option>
             <option value="inline" ${slot.vocabDisplayMode==='inline'?'selected':''}>본문 단어 옆 [뜻] 삽입</option>
           </select>
         </div>
-        <div class="vocab-note-inline-warn" style="display:${(slot.vocabEnabled && slot.vocabDisplayMode==='inline')?'block':'none'}">'교체' 위치에서는 원문이 결과물에 표시되지 않아서 단어 옆에 삽입할 자리가 없어요 — 이 경우 자동으로 목록(불렛) 방식으로 대신 나갑니다.</div>
-        <div class="vocab-output-row" style="display:${slot.vocabEnabled?'flex':'none'}; margin-top:6px; gap:14px; font-size:12px; flex-wrap:wrap;">
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" class="vocab-embed-chk" ${slot.vocabEmbed?'checked':''}/> 결과물에 포함(임베드)</label>
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" class="vocab-export-chk" ${slot.vocabExportFile?'checked':''}/> 단어장 파일 별도 생성</label>
+        <div class="vocab-note-inline-warn" style="display:none">'교체' 위치에서는 원문이 결과물에 표시되지 않아서 단어 옆에 삽입할 자리가 없어요 — 이 경우 자동으로 목록(불렛) 방식으로 대신 나갑니다.</div>
+        <!-- 🆕 내보내기 형식: txt/Anki를 독립적으로 체크. 자동으로 txt가 생성되던 동작은 없앰(둘 다 체크 안 하면 아무 파일도 안 생김) -->
+        <div class="vocab-export-row" style="display:${slot.vocabEnabled?'flex':'none'}; margin-top:6px; gap:14px; font-size:12px; flex-wrap:wrap; align-items:center;">
+          <label style="color:var(--text-faint); font-family:var(--mono); font-size:11px; text-transform:uppercase;">내보내기</label>
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" class="vocab-export-txt-chk" ${slot.vocabExportTxt?'checked':''}/> txt 파일</label>
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" class="vocab-anki-chk" ${slot.vocabExportAnki?'checked':''}/> Anki 카드덱(.apkg)</label>
         </div>
-        <div class="vocab-export-sub" style="display:${(slot.vocabEnabled && slot.vocabExportFile)?'block':'none'}; margin-top:4px; padding-left:2px;">
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; margin-bottom:5px;"><input type="checkbox" class="vocab-examples-chk" ${slot.vocabExportExamples?'checked':''}/> 별도 파일에 예문(원문+번역) 포함</label>
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px;"><input type="checkbox" class="vocab-anki-chk" ${slot.vocabExportAnki?'checked':''}/> Anki 카드덱(.apkg)으로도 내보내기</label>
+        <div class="vocab-export-sub" style="display:${(slot.vocabEnabled && (slot.vocabExportTxt||slot.vocabExportAnki))?'block':'none'}; margin-top:4px; padding-left:2px;">
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px;"><input type="checkbox" class="vocab-examples-chk" ${slot.vocabExportExamples?'checked':''}/> 예문(원문+번역) 포함</label>
         </div>
         <div class="vocab-note-lang" style="display:${(!vocabSupported || slot.vocabEnabled)?'block':'none'}">${vocabSupported ? '원문이 영어·스페인어·러시아어일 때만 적용됩니다 (자막 빈도 데이터 기반 근사 등급). 같은 단어는 문서 전체에서 한 번만 뽑히고, 고유명사로 추정되는 단어(문장 중간에서 대문자로 시작하거나 사전에 없는 단어)는 자동으로 제외됩니다.' : '이 원본 언어는 아직 단어 학습 기능을 지원하지 않아요.'}</div>
       </div>
@@ -1015,14 +1076,37 @@ function renderSlotCards(container, f){
         ${f.slots.length>1 ? '<button class="slot-remove">삭제</button>' : ''}
       </div>
     `;
+    const positionRowWrap = card.querySelector('.position-row-wrap');
+    const vocabOnlyNote = card.querySelector('.vocab-only-note');
+    const vocabOnlyModeRow = card.querySelector('.vocab-onlymode-row');
     const vocabLevelRow = card.querySelector('.vocab-level-row');
     const vocabCountRow = card.querySelector('.vocab-count-row');
     const vocabTotalRow = card.querySelector('.vocab-total-row');
     const vocabDisplayRow = card.querySelector('.vocab-display-row');
     const vocabNoteInlineWarn = card.querySelector('.vocab-note-inline-warn');
     const vocabOutputRow = card.querySelector('.vocab-output-row');
+    const vocabExportRow = card.querySelector('.vocab-export-row');
     const vocabExportSub = card.querySelector('.vocab-export-sub');
     const vocabNoteLang = card.querySelector('.vocab-note-lang');
+
+    // 🆕 여러 체크박스가 서로 영향을 주는 표시/숨김 로직을 한 곳에 모아서 매번 다시 계산
+    function refreshVocabVisibility(){
+      vocabOnlyNote.style.display = slot.vocabOnlyMode ? 'block' : 'none';
+      vocabOnlyModeRow.style.display = slot.vocabEnabled ? 'flex' : 'none';
+      vocabLevelRow.style.display = slot.vocabEnabled ? '' : 'none';
+      vocabCountRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='perBlock') ? 'block' : 'none';
+      vocabTotalRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='total') ? 'block' : 'none';
+      // 본문 번역 자체가 없는 '단어장만' 모드에서는 임베드 옵션이 의미가 없어서 숨김
+      vocabOutputRow.style.display = (slot.vocabEnabled && !slot.vocabOnlyMode) ? 'flex' : 'none';
+      // 🆕 표시 방식은 임베드가 체크돼 있을 때만 노출
+      const showDisplayRow = slot.vocabEnabled && !slot.vocabOnlyMode && slot.vocabEmbed;
+      vocabDisplayRow.style.display = showDisplayRow ? 'flex' : 'none';
+      vocabNoteInlineWarn.style.display = (showDisplayRow && slot.vocabDisplayMode==='inline') ? 'block' : 'none';
+      vocabExportRow.style.display = slot.vocabEnabled ? 'flex' : 'none';
+      vocabExportSub.style.display = (slot.vocabEnabled && (slot.vocabExportTxt || slot.vocabExportAnki)) ? 'block' : 'none';
+      vocabNoteLang.style.display = (!vocabSupported || slot.vocabEnabled) ? 'block' : 'none';
+    }
+
     card.querySelector('.glossary-input').addEventListener('input', e=>{ slot.glossary = e.target.value; });
     card.querySelector('.src-select').addEventListener('change', e=>{
       slot.source = e.target.value;
@@ -1038,37 +1122,43 @@ function renderSlotCards(container, f){
     });
     card.querySelector('.vocab-toggle').addEventListener('change', e=>{
       slot.vocabEnabled = e.target.checked;
-      vocabLevelRow.style.display = slot.vocabEnabled ? '' : 'none';
-      vocabCountRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='perBlock') ? 'block' : 'none';
-      vocabTotalRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='total') ? 'block' : 'none';
-      vocabDisplayRow.style.display = slot.vocabEnabled ? 'flex' : 'none';
-      vocabNoteInlineWarn.style.display = (slot.vocabEnabled && slot.vocabDisplayMode==='inline') ? 'block' : 'none';
-      vocabOutputRow.style.display = slot.vocabEnabled ? 'flex' : 'none';
-      vocabExportSub.style.display = (slot.vocabEnabled && slot.vocabExportFile) ? 'block' : 'none';
-      vocabNoteLang.style.display = (!vocabSupported || slot.vocabEnabled) ? 'block' : 'none';
+      refreshVocabVisibility();
+      renderFileBlockList();
+    });
+    card.querySelector('.vocab-onlymode-chk').addEventListener('change', e=>{
+      slot.vocabOnlyMode = e.target.checked;
+      positionRowWrap.classList.toggle('disabled', slot.vocabOnlyMode);
+      refreshVocabVisibility();
       renderFileBlockList();
     });
     card.querySelector('.vocab-level-select').addEventListener('change', e=>{ slot.vocabLevel = e.target.value; renderFileBlockList(); });
     card.querySelector('.vocab-extract-mode-select').addEventListener('change', e=>{
       slot.vocabExtractMode = e.target.value;
-      vocabCountRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='perBlock') ? 'block' : 'none';
-      vocabTotalRow.style.display = (slot.vocabEnabled && slot.vocabExtractMode==='total') ? 'block' : 'none';
+      refreshVocabVisibility();
     });
     card.querySelector('.vocab-total-input').addEventListener('input', e=>{
       slot.vocabTotalWords = Math.max(1, Math.min(2000, parseInt(e.target.value,10)||100));
     });
     card.querySelector('.vocab-display-mode-select').addEventListener('change', e=>{
       slot.vocabDisplayMode = e.target.value;
-      vocabNoteInlineWarn.style.display = (slot.vocabEnabled && slot.vocabDisplayMode==='inline') ? 'block' : 'none';
+      refreshVocabVisibility();
     });
     card.querySelector('.vocab-count-select').addEventListener('change', e=>{ slot.vocabMaxWords = parseInt(e.target.value,10) || 6; });
-    card.querySelector('.vocab-embed-chk').addEventListener('change', e=>{ slot.vocabEmbed = e.target.checked; });
-    card.querySelector('.vocab-export-chk').addEventListener('change', e=>{
-      slot.vocabExportFile = e.target.checked;
-      vocabExportSub.style.display = (slot.vocabEnabled && slot.vocabExportFile) ? 'block' : 'none';
+    card.querySelector('.vocab-embed-chk').addEventListener('change', e=>{
+      slot.vocabEmbed = e.target.checked;
+      refreshVocabVisibility();
+    });
+    card.querySelector('.vocab-export-txt-chk').addEventListener('change', e=>{
+      slot.vocabExportTxt = e.target.checked;
+      refreshVocabVisibility();
     });
     card.querySelector('.vocab-examples-chk').addEventListener('change', e=>{ slot.vocabExportExamples = e.target.checked; });
-    card.querySelector('.vocab-anki-chk').addEventListener('change', e=>{ slot.vocabExportAnki = e.target.checked; });
+    card.querySelector('.vocab-anki-chk').addEventListener('change', e=>{
+      slot.vocabExportAnki = e.target.checked;
+      refreshVocabVisibility();
+    });
+    refreshVocabVisibility();
+    if (slot.vocabOnlyMode) positionRowWrap.classList.add('disabled');
     const rmBtn = card.querySelector('.slot-remove');
     if (rmBtn) rmBtn.addEventListener('click', ()=>{ f.slots = f.slots.filter(s=>s.id!==slot.id); renderSlotCards(container, f); renderFileBlockList(); });
     card.querySelector('.slot-apply-all').addEventListener('click', ()=>{
@@ -1652,6 +1742,17 @@ async function gtranslateRaw(text, sl, tl){
   return { translated, detected };
 }
 
+/* 🆕 '번역 없이 단어장만' 모드에서 원문 언어가 auto일 때, 문서 전체를 번역하지 않고도
+   언어만 감지하기 위한 가벼운 헬퍼. 앞부분 일부만 떼어 한 번만 호출한다. */
+async function detectSourceLangSample(blocks, targetLangForCall){
+  const sample = blocks.slice(0,5).map(b=>b.text).join(' ').slice(0,500).trim();
+  if (!sample) return null;
+  try{
+    const { detected } = await gtranslateRaw(sample, 'auto', targetLangForCall || 'en');
+    return detected;
+  } catch(e){ return null; }
+}
+
 /* ---- 마커 기반 정렬: 언어쌍에 따라 어떤 특수문자가 구글 번역을 통과하며
    살아남는지가 다르기 때문에(한 마커가 특정 언어쌍에서는 사라지거나
    숫자가 단어로 번역돼버릴 수 있음), 여러 후보를 순서대로 시도해서
@@ -1907,13 +2008,29 @@ function renderJobList(jobs){
   ).join('');
   el.innerHTML = summary + rows;
 }
+/* 🆕 완료 파일 목록에서 제목이 길어도 확장자가 항상 보이도록, 끝이 아니라 "중간" 글자를 생략한다.
+   CSS의 text-overflow:ellipsis는 끝부분을 잘라내서 .srt/.epub 같은 확장자가 안 보일 수 있어서,
+   JS에서 직접 중간을 잘라 확장자를 항상 남긴다. */
+function truncateMiddleFilename(name, maxLen){
+  maxLen = maxLen || 34;
+  if (name.length <= maxLen) return name;
+  const dotIdx = name.lastIndexOf('.');
+  const hasExt = dotIdx > 0 && dotIdx < name.length-1 && (name.length-dotIdx) <= 8;
+  const ext = hasExt ? name.slice(dotIdx) : '';
+  const base = hasExt ? name.slice(0, dotIdx) : name;
+  const keep = maxLen - ext.length - 1; // 1자는 생략 기호(…) 몫
+  if (keep <= 6) return name.slice(0, Math.max(1,maxLen-1)) + '…';
+  const front = Math.ceil(keep * 0.6);
+  const back = keep - front;
+  return base.slice(0, front) + '…' + base.slice(base.length - back) + ext;
+}
 function renderResultsList(items){
   const el = document.getElementById('results');
   el.innerHTML = '';
   items.forEach(r=>{
     const div = document.createElement('div');
     div.className = 'result-item';
-    div.innerHTML = `<span class="rname">${escapeHtml(r.name)}</span><a href="${r.url}" download="${escapeHtml(r.name)}">다운로드</a>`;
+    div.innerHTML = `<span class="rname" title="${escapeHtml(r.name)}">${escapeHtml(truncateMiddleFilename(r.name))}</span><a href="${r.url}" download="${escapeHtml(r.name)}">다운로드</a>`;
     el.appendChild(div);
   });
 }
@@ -1964,19 +2081,36 @@ async function runTranslation(files){
       const tag = job.label;
       job.status = 'running';
       renderJobList(jobs);
-      setStatus(`${tag} 번역 준비 중...`);
+      const wantsExport = slot.vocabExportTxt || slot.vocabExportAnki;
       try{
-        const chunkOpts = resolveChunkOpts(file.ext, advancedOpts.enabled ? advancedOpts : null);
-        const { translations, detectedSource } = await translateBlocks(parsed.blocks, slot.source, slot.target, (d,t)=> setStatus(`${tag} 진행: ${d}/${t}`), chunkOpts);
+        // 🆕 슬롯이 '단어장만' 모드인데 내보내기 형식(txt/Anki)을 하나도 안 골랐으면, 아무 파일도
+        // 안 만들어지는 상황이라 미리 경고하고 이 슬롯은 건너뛴다 (자동으로 txt를 내보내던 예전 동작은 없앰).
+        if (slot.vocabOnlyMode && slot.vocabEnabled && !wantsExport){
+          appendLog(`⚠️ ${tag}: '번역 없이 단어장만 생성'이 켜져 있는데 내보내기 형식(txt/Anki)이 선택되지 않아 건너뜁니다.`);
+          job.status = 'error';
+        } else {
 
-        const glossaryPairs = parseGlossary(slot.glossary);
-        if (glossaryPairs.length){
-          Object.keys(translations).forEach(id=>{ translations[id] = applyGlossary(translations[id], glossaryPairs); });
-        }
+        let translations = {}, detectedSource = null;
 
-        // 🆕 실험적 서술체 후처리: 문서 프로파일 + 한국어 타겟 + 토글 켜짐일 때만 적용
-        if (advancedOpts.narrativeStyle && slot.target==='ko' && profileTypeForExt(file.ext)==='document'){
-          Object.keys(translations).forEach(id=>{ translations[id] = tryNarrativeStyle(translations[id]); });
+        if (!slot.vocabOnlyMode){
+          setStatus(`${tag} 번역 준비 중...`);
+          const chunkOpts = resolveChunkOpts(file.ext, advancedOpts.enabled ? advancedOpts : null);
+          const res = await translateBlocks(parsed.blocks, slot.source, slot.target, (d,t)=> setStatus(`${tag} 진행: ${d}/${t}`), chunkOpts);
+          translations = res.translations; detectedSource = res.detectedSource;
+
+          const glossaryPairs = parseGlossary(slot.glossary);
+          if (glossaryPairs.length){
+            Object.keys(translations).forEach(id=>{ translations[id] = applyGlossary(translations[id], glossaryPairs); });
+          }
+
+          // 🆕 실험적 서술체 후처리: 문서 프로파일 + 한국어 타겟 + 토글 켜짐일 때만 적용
+          if (advancedOpts.narrativeStyle && slot.target==='ko' && profileTypeForExt(file.ext)==='document'){
+            Object.keys(translations).forEach(id=>{ translations[id] = tryNarrativeStyle(translations[id]); });
+          }
+        } else if (slot.source === 'auto'){
+          // 🆕 '단어장만' 모드: 문서 전체를 번역하지 않고, 언어 감지만 가볍게 수행
+          setStatus(`${tag} 언어 감지 중...`);
+          detectedSource = await detectSourceLangSample(parsed.blocks, slot.target);
         }
 
         let vocabMap = {}, vocabInlineMap = {}, vocabList = [];
@@ -1986,8 +2120,8 @@ async function runTranslation(files){
             setStatus(`${tag} 단어장 생성 중...`);
             const countParam = slot.vocabExtractMode==='total' ? slot.vocabTotalWords : slot.vocabMaxWords;
             const built = await buildVocabMap(parsed.blocks, effectiveSource, slot.target, slot.vocabLevel, slot.vocabExtractMode, countParam, (d,t)=> setStatus(`${tag} 단어장: 사전조회 ${d}/${t} (고유 단어 기준)`), {
-              includeExamples: !!(slot.vocabExportFile && slot.vocabExportExamples),
-              translations
+              includeExamples: !!(wantsExport && slot.vocabExportExamples),
+              translations: slot.vocabOnlyMode ? null : translations
             });
             vocabMap = built.vocabMap; vocabInlineMap = built.vocabInlineMap; vocabList = built.vocabList;
           } else {
@@ -1995,30 +2129,37 @@ async function runTranslation(files){
           }
         }
 
-        // 🆕 '교체' 위치는 원문이 결과물에 없어서 인라인 삽입 자리가 없음 → 자동으로 목록(list) 방식으로 대체
-        const effectiveVocabDisplay = (slot.vocabDisplayMode==='inline' && slot.position!=='replace') ? 'inline' : 'list';
-        const embedVocabMap = slot.vocabEmbed ? (effectiveVocabDisplay==='inline' ? vocabInlineMap : vocabMap) : {};
-        const { content, isBinary } = await parsed.rebuild(translations, slot.position, embedVocabMap, effectiveVocabDisplay, file.fb2OutputFormat || 'epub');
-        const outExt = (file.ext === 'fb2') ? (file.fb2OutputFormat==='fb2' ? 'fb2' : 'epub') : file.ext;
-        const outName = `${file.outputBaseName}${file.addLangSuffix ? '_'+slot.target : ''}.${outExt}`;
-        zip.file(outName, content);
-        const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
-        const url = URL.createObjectURL(blobForLink);
-        resultItems.push({ name: outName, url });
-        appendLog(`✅ ${outName} 생성 완료 (${parsed.blocks.length}개 블록)`);
+        if (!slot.vocabOnlyMode){
+          // 🆕 '교체' 위치는 원문이 결과물에 없어서 인라인 삽입 자리가 없음 → 자동으로 목록(list) 방식으로 대체
+          const effectiveVocabDisplay = (slot.vocabDisplayMode==='inline' && slot.position!=='replace') ? 'inline' : 'list';
+          const embedVocabMap = slot.vocabEmbed ? (effectiveVocabDisplay==='inline' ? vocabInlineMap : vocabMap) : {};
+          const { content, isBinary } = await parsed.rebuild(translations, slot.position, embedVocabMap, effectiveVocabDisplay, file.fb2OutputFormat || 'epub');
+          const outExt = (file.ext === 'fb2') ? (file.fb2OutputFormat==='fb2' ? 'fb2' : 'epub') : file.ext;
+          const outName = `${file.outputBaseName}${file.addLangSuffix ? '_'+slot.target : ''}.${outExt}`;
+          zip.file(outName, content);
+          const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
+          const url = URL.createObjectURL(blobForLink);
+          resultItems.push({ name: outName, url });
+          appendLog(`✅ ${outName} 생성 완료 (${parsed.blocks.length}개 블록)`);
+        } else {
+          appendLog(`📘 ${tag}: 본문 번역 없이 단어장만 생성합니다.`);
+        }
 
-        if (slot.vocabEnabled && slot.vocabExportFile && vocabList.length){
-          const vocabContent = formatVocabFile(vocabList, {
-            sourceLabel: langName(slot.source==='auto' ? (detectedSource||'auto') : slot.source),
-            targetLabel: langName(slot.target),
-            level: slot.vocabLevel
-          });
-          const vocabName = `${file.outputBaseName}_${slot.target}_단어장.txt`;
-          zip.file(vocabName, vocabContent);
-          const vocabBlob = new Blob([vocabContent], {type:'text/plain;charset=utf-8'});
-          const vocabUrl = URL.createObjectURL(vocabBlob);
-          resultItems.push({ name: vocabName, url: vocabUrl });
-          appendLog(`📘 ${vocabName} 생성 완료 (${vocabList.length}개 단어)`);
+        // 🆕 내보내기는 이제 txt/Anki를 독립적으로 체크한 것만 생성 — 자동으로 txt를 만들던 동작은 없앰
+        if (slot.vocabEnabled && wantsExport && vocabList.length){
+          if (slot.vocabExportTxt){
+            const vocabContent = formatVocabFile(vocabList, {
+              sourceLabel: langName(slot.source==='auto' ? (detectedSource||'auto') : slot.source),
+              targetLabel: langName(slot.target),
+              level: slot.vocabLevel
+            });
+            const vocabName = `${file.outputBaseName}_${slot.target}_단어장.txt`;
+            zip.file(vocabName, vocabContent);
+            const vocabBlob = new Blob([vocabContent], {type:'text/plain;charset=utf-8'});
+            const vocabUrl = URL.createObjectURL(vocabBlob);
+            resultItems.push({ name: vocabName, url: vocabUrl });
+            appendLog(`📘 ${vocabName} 생성 완료 (${vocabList.length}개 단어)`);
+          }
 
           if (slot.vocabExportAnki){
             setStatus(`${tag} Anki 카드덱(.apkg) 생성 중...`);
@@ -2033,17 +2174,18 @@ async function runTranslation(files){
               zip.file(ankiName, ankiBlob);
               const ankiUrl = URL.createObjectURL(ankiBlob);
               resultItems.push({ name: ankiName, url: ankiUrl });
-              appendLog(`🗂️ ${ankiName} 생성 완료 (더블클릭하거나 Anki에서 File > Import로 바로 가져오기 가능. 뒷면엔 뜻만, 예문은 별도 Example 필드${includeEx ? '' : ' — 이번엔 예문 미포함이라 필드 생략'})`);
+              appendLog(`🗂️ ${ankiName} 생성 완료 (더블클릭하거나 Anki에서 File > Import로 바로 가져오기 가능. 예문과 예문 번역은 서로 다른 필드${includeEx ? '' : ' — 이번엔 예문 미포함이라 필드 생략'})`);
             } catch(e){
               appendLog(`❌ ${tag} Anki 카드덱(.apkg) 생성 실패: ${e.message}`);
             }
           }
-        } else if (slot.vocabEnabled && slot.vocabExportFile){
+        } else if (slot.vocabEnabled && wantsExport){
           appendLog(`⚠️ ${tag}: 단어장에 담을 단어가 없어 별도 파일을 만들지 않았습니다.`);
         }
         job.status = 'done';
+        }
       } catch(e){
-        appendLog(`❌ ${tag} 번역 실패: ${e.message}`);
+        appendLog(`❌ ${tag} 처리 실패: ${e.message}`);
         job.status = 'error';
       }
       jobIndex++;
