@@ -140,6 +140,8 @@
     background: var(--bg-panel); color: var(--text-dim); font-size:11px; cursor:pointer; transition: all .12s;
   }
   .pos-btn.active{ border-color: var(--accent); color: var(--accent); background: rgba(201,106,31,0.08); }
+  .position-row.disabled .pos-btn{ opacity:.4; cursor:not-allowed; pointer-events:none; }
+  .merge-badge{ font-family: var(--mono); font-size:9.5px; color: var(--accent2); background: rgba(15,122,109,0.1); border:1px solid rgba(15,122,109,0.3); border-radius:12px; padding:1px 7px; margin-left:6px; }
   .vocab-box{ background: var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; padding:10px; margin-bottom:10px; }
   .vocab-box .vocab-toprow{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .vocab-box .vocab-toprow label{ font-size:12px; color: var(--text-dim); font-weight:500; }
@@ -396,7 +398,7 @@ async function handleFiles(fileList){
     const baseName = f.name.replace(/\.[^.]+$/, '');
     const item = {
       id: uid(), name: f.name, ext, raw: null, blocks: null, parseError: null,
-      outputBaseName: baseName, addLangSuffix: true, fb2OutputFormat: 'epub', slots: [newSlot()]
+      outputBaseName: baseName, addLangSuffix: true, fb2OutputFormat: 'epub', mergeLangs: false, slots: [newSlot()]
     };
     try{
       item.raw = (ext === 'epub') ? await f.arrayBuffer() : await f.text();
@@ -539,10 +541,32 @@ function renderSettings(){
   addBtn.addEventListener('click', ()=>{
     const last = f.slots[f.slots.length-1];
     f.slots.push(newSlot(last));
-    renderSlotCards(slotContainer, f);
     renderFileBlockList();
+    renderSettings();
   });
   panel.appendChild(addBtn);
+
+  // 🆕 여러 번역어를 한 파일에 합치기: 슬롯이 2개 이상일 때만 노출.
+  // 켜면 "원어-번역어1-번역어2..." 순서로 한 파일에 전부 쌓아서 출력 파일 1개만 만든다.
+  if (f.slots.length > 1){
+    const mergeRow = document.createElement('div');
+    mergeRow.className = 'toggle-row';
+    mergeRow.innerHTML = `
+      <label>여러 번역어를 한 파일에 합치기<br/><span style="font-size:10.5px; color:var(--text-faint); font-weight:400;">원어 → 번역어1 → 번역어2 순으로 한 파일에 쌓기</span></label>
+      <label class="switch"><input type="checkbox" id="mergeLangsToggle" ${f.mergeLangs?'checked':''}/><span class="slider"></span></label>
+    `;
+    panel.appendChild(mergeRow);
+    mergeRow.querySelector('#mergeLangsToggle').addEventListener('change', e=>{
+      f.mergeLangs = e.target.checked;
+      renderSettings();
+    });
+    if (f.mergeLangs){
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.textContent = '합치기가 켜지면 각 언어 슬롯의 "위/아래/교체" 위치 설정은 무시되고, 슬롯 순서(1→2→3...)대로 원문 아래에 번역이 차례로 이어붙은 파일 1개만 생성됩니다. (언어별 개별 파일은 생성되지 않음)';
+      panel.appendChild(note);
+    }
+  }
 
   const translateBtn = document.createElement('button');
   translateBtn.className = 'btn btn-ghost btn-block';
@@ -553,18 +577,19 @@ function renderSettings(){
 
 function renderSlotCards(container, f){
   container.innerHTML = '';
+  const mergeMode = f.mergeLangs && f.slots.length > 1;
   f.slots.forEach((slot, idx)=>{
     const card = document.createElement('div');
     card.className = 'slot-card';
     const sourceOpts = SOURCE_LANGS.map(([c,n])=>`<option value="${c}" ${slot.source===c?'selected':''}>${n}</option>`).join('');
     const targetOpts = LANGS.map(([c,n])=>`<option value="${c}" ${slot.target===c?'selected':''}>${n}</option>`).join('');
     card.innerHTML = `
-      <div class="slot-index">${idx+1}</div>
+      <div class="slot-index">${idx+1}${mergeMode?'<span class="merge-badge">병합 순서 '+(idx+1)+'</span>':''}</div>
       <div class="slot-grid">
         <select class="src-select">${sourceOpts}</select>
         <select class="tgt-select">${targetOpts}</select>
       </div>
-      <div class="position-row">
+      <div class="position-row ${mergeMode?'disabled':''}" title="${mergeMode?'합치기 모드에서는 위치 설정이 무시되고 항상 원문 아래에 순서대로 쌓입니다.':''}">
         <div class="pos-btn ${slot.position==='below'?'active':''}" data-pos="below">아래</div>
         <div class="pos-btn ${slot.position==='above'?'active':''}" data-pos="above">위</div>
         <div class="pos-btn ${slot.position==='replace'?'active':''}" data-pos="replace">교체</div>
@@ -593,7 +618,11 @@ function renderSlotCards(container, f){
       });
     });
     const rmBtn = card.querySelector('.slot-remove');
-    if (rmBtn) rmBtn.addEventListener('click', ()=>{ f.slots = f.slots.filter(s=>s.id!==slot.id); renderSlotCards(container, f); renderFileBlockList(); });
+    if (rmBtn) rmBtn.addEventListener('click', ()=>{
+      f.slots = f.slots.filter(s=>s.id!==slot.id);
+      if (f.slots.length <= 1) f.mergeLangs = false;
+      renderFileBlockList(); renderSettings();
+    });
     card.querySelector('.slot-apply-all').addEventListener('click', ()=>{
       const others = uploadedFiles.filter(x=>x.id!==f.id);
       if (!others.length){ alert('적용할 다른 파일이 없습니다 (업로드된 파일이 이것 하나뿐이에요).'); return; }
@@ -642,6 +671,19 @@ function parseSRT(raw){
         return `${e.index}\n${e.time}\n${textBlock}`;
       });
       return { content: out.join('\n\n')+'\n', isBinary:false };
+    },
+    // 🆕 여러 언어를 한 파일에 합치기: transList = [{target, translations}, ...] 슬롯 순서대로.
+    // 위치 설정과 무관하게 항상 "원문 → 번역어1 → 번역어2 ..." 순으로 쌓는다.
+    rebuildMulti: async (transList) => {
+      const out = entries.map(e=>{
+        const lines = [e.text];
+        transList.forEach(t=>{
+          const tr = t.translations[e.id];
+          if (tr!==undefined) lines.push(tr);
+        });
+        return `${e.index}\n${e.time}\n${lines.join('\n').trim()}`;
+      });
+      return { content: out.join('\n\n')+'\n', isBinary:false };
     }
   };
 }
@@ -681,6 +723,18 @@ function parseVTT(raw){
         return `${idLine}${e.timeLine}\n${textBlock}`;
       }).join('\n\n');
       return { content: 'WEBVTT\n\n'+body+'\n', isBinary:false };
+    },
+    rebuildMulti: async (transList) => {
+      const body = entries.map(e=>{
+        const lines = [e.text];
+        transList.forEach(t=>{
+          const tr = t.translations[e.id];
+          if (tr!==undefined) lines.push(tr);
+        });
+        const idLine = e.cueId ? e.cueId+'\n' : '';
+        return `${idLine}${e.timeLine}\n${lines.join('\n').trim()}`;
+      }).join('\n\n');
+      return { content: 'WEBVTT\n\n'+body+'\n', isBinary:false };
     }
   };
 }
@@ -702,6 +756,17 @@ function parseTXT(raw){
         else if (position==='above') piece = translated+'\n'+original;
         else piece = original+'\n'+translated;
         return piece;
+      });
+      return { content: out.join('\n\n')+'\n', isBinary:false };
+    },
+    rebuildMulti: async (transList) => {
+      const out = blocks.map(b=>{
+        const lines = [b.text];
+        transList.forEach(t=>{
+          const tr = t.translations[b.id];
+          if (tr!==undefined) lines.push(tr);
+        });
+        return lines.join('\n');
       });
       return { content: out.join('\n\n')+'\n', isBinary:false };
     }
@@ -749,7 +814,16 @@ async function parseEPUB(raw){
     els.forEach(el=>{
       const id = 'e'+(counter++);
       const t = el.textContent.trim();
-      elMap.push({id, el});
+      // 🆕 버그 수정: 이전에는 elMap이 이 dom 안의 el을 직접 참조해서, rebuild()가 슬롯마다
+      // el/dom을 그 자리에서(in-place) 고쳐썼다. 슬롯이 2개 이상이고 "합치기"를 안 쓰면
+      // rebuild()가 슬롯마다 여러 번 호출되는데, 매번 "같은" 이미 수정된 dom 위에 또 수정을
+      // 얹다 보니 두 번째 이후 슬롯의 "개별" 출력 파일에 이전 슬롯의 번역 조각이 같이 섞여
+      // 들어가는 문제가 있었다(위치가 above/below일 때 clone이 계속 누적됨).
+      // 고침: el에 자리표(data-tr-id)만 심어두고, rebuild 시점마다 dom을 매번 새로 clone해서
+      // 그 clone 안에서 data-tr-id로 요소를 다시 찾아 수정한다. 원본 dom(entry.dom)은
+      // 이제부터 절대 직접 수정하지 않는 "읽기 전용 템플릿"으로만 쓴다.
+      el.setAttribute('data-tr-id', id);
+      elMap.push({id});
       blocks.push({id, text:t});
     });
     fileEntries.push({path, dom, elMap});
@@ -761,7 +835,11 @@ async function parseEPUB(raw){
       const outZip = await JSZip.loadAsync(raw);
       const serializer = new XMLSerializer();
       for (const entry of fileEntries){
-        entry.elMap.forEach(({id, el})=>{
+        const freshDom = entry.dom.cloneNode(true); // 항상 원본 템플릿에서 새로 복제
+        entry.elMap.forEach(({id})=>{
+          const el = freshDom.querySelector(`[data-tr-id="${id}"]`);
+          if (!el) return;
+          el.removeAttribute('data-tr-id');
           const translated = translations[id];
           if (translated!==undefined){
             if (position==='replace'){
@@ -776,7 +854,37 @@ async function parseEPUB(raw){
             }
           }
         });
-        let serialized = serializer.serializeToString(entry.dom);
+        let serialized = serializer.serializeToString(freshDom);
+        if (!/^<\?xml/.test(serialized)) serialized = '<?xml version="1.0" encoding="utf-8"?>\n'+serialized;
+        outZip.file(entry.path, serialized);
+      }
+      const blob = await outZip.generateAsync({type:'blob', mimeType:'application/epub+zip'});
+      return { content: blob, isBinary:true };
+    },
+    // 🆕 여러 언어를 한 파일에 합치기: 각 원문 요소 뒤에 번역어1, 번역어2 ... 순서로
+    // 형제 요소를 이어붙인다(위치 설정은 무시, 항상 원문 다음에 순서대로).
+    rebuildMulti: async (transList) => {
+      const outZip = await JSZip.loadAsync(raw);
+      const serializer = new XMLSerializer();
+      for (const entry of fileEntries){
+        const freshDom = entry.dom.cloneNode(true);
+        entry.elMap.forEach(({id})=>{
+          const el = freshDom.querySelector(`[data-tr-id="${id}"]`);
+          if (!el) return;
+          el.removeAttribute('data-tr-id');
+          let anchor = el;
+          transList.forEach(t=>{
+            const translated = t.translations[id];
+            if (translated===undefined) return;
+            const clone = el.ownerDocument.createElement(el.tagName);
+            const existingClass = el.getAttribute('class') || '';
+            clone.setAttribute('class', (existingClass+' translated-block translated-'+t.target).trim());
+            clone.textContent = translated;
+            anchor.parentNode.insertBefore(clone, anchor.nextSibling);
+            anchor = clone;
+          });
+        });
+        let serialized = serializer.serializeToString(freshDom);
         if (!/^<\?xml/.test(serialized)) serialized = '<?xml version="1.0" encoding="utf-8"?>\n'+serialized;
         outZip.file(entry.path, serialized);
       }
@@ -1064,6 +1172,36 @@ async function parseFB2(raw){
     return parts;
   }
 
+  // 🆕 여러 언어를 한 파일에 합치기: transList = [{target, translations}, ...] 슬롯 순서대로,
+  // 항상 "원문 → 번역어1 → 번역어2 ..." 순으로 쌓는다(위치 설정 없음, single 버전과 로직 공유).
+  function renderNodesToXhtmlPartsMulti(nodes, transList){
+    const wrap = (t, cls) => `<p class="${cls}">${escapeHtml(t)}</p>`;
+    function renderBlockPairMulti(id, cls){
+      const original = blocksById.get(id) || '';
+      const out = [wrap(original, cls+' orig')];
+      transList.forEach(t=>{
+        const tr = t.translations[id];
+        if (tr!==undefined) out.push(wrap(tr, cls+' tr tr-'+t.target));
+      });
+      return out;
+    }
+    const parts = [];
+    nodes.forEach(n=>{
+      switch(n.type){
+        case 'heading': parts.push(...renderBlockPairMulti(n.id, 'h2')); break;
+        case 'subtitle': parts.push(...renderBlockPairMulti(n.id, 'subtitle')); break;
+        case 'p': parts.push(...renderBlockPairMulti(n.id, 'p')); break;
+        case 'verse': parts.push(...renderBlockPairMulti(n.id, 'verse')); break;
+        case 'text-author': parts.push(...renderBlockPairMulti(n.id, 'text-author')); break;
+        case 'empty-line': parts.push('<div class="empty-line"></div>'); break;
+        case 'image': parts.push(`<img src="images/${escapeHtml(n.filename)}" alt=""/>`); break;
+        case 'quote-open': parts.push(`<div class="${n.tag}">`); break;
+        case 'quote-close': parts.push('</div>'); break;
+      }
+    });
+    return parts;
+  }
+
   /* 🆕 "FB2 유지(번역만)" 출력 모드: 원본 XML을 복제해서 data-blk 태그가 붙은 요소만 텍스트를
      교체/추가한다. 이미지·바이너리·챕터 구조는 원본 그대로라 애초에 유실될 일이 없다. */
   function rebuildFb2Passthrough(translations, position){
@@ -1100,6 +1238,44 @@ async function parseFB2(raw){
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
   }
 
+  // 🆕 "FB2 유지" + 여러 언어 합치기: 원본 요소 뒤에 번역어1, 번역어2 ... 순서로
+  // 형제 요소를 이어붙인다(위치 설정 없음, 항상 원문 다음에 순서대로).
+  function rebuildFb2PassthroughMulti(transList){
+    const clone = dom.cloneNode(true);
+    const ns = clone.documentElement.namespaceURI;
+    function setTextPreservingChildren(el, text){
+      Array.from(el.childNodes).forEach(n=>{ if (n.nodeType===3) el.removeChild(n); });
+      el.insertBefore(clone.createTextNode(text), el.firstChild);
+    }
+    clone.querySelectorAll('[data-blk]').forEach(el=>{
+      const id = el.getAttribute('data-blk');
+      el.removeAttribute('data-blk');
+      const original = blocksById.get(id) || '';
+      const tag = fb2LocalName(el);
+      const makeLike = (text) => { const e = clone.createElementNS(ns, tag==='title'?'p':tag); e.textContent = text; return e; };
+      if (tag==='title'){
+        Array.from(el.children).forEach(c=> el.removeChild(c));
+        el.appendChild(makeLike(original));
+        transList.forEach(t=>{
+          const tr = t.translations[id];
+          if (tr!==undefined) el.appendChild(makeLike(tr));
+        });
+        return;
+      }
+      setTextPreservingChildren(el, original);
+      let anchor = el;
+      transList.forEach(t=>{
+        const tr = t.translations[id];
+        if (tr===undefined) return;
+        const node = makeLike(tr);
+        anchor.parentNode.insertBefore(node, anchor.nextSibling);
+        anchor = node;
+      });
+    });
+    const xml = new XMLSerializer().serializeToString(clone);
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
+  }
+
   return {
     blocks,
     rebuild: async (translations, position, format) => {
@@ -1110,6 +1286,22 @@ async function parseFB2(raw){
       }
       const chapterFiles = kept.map(chap=>{
         const parts = renderNodesToXhtmlParts(chap.nodes, translations, position);
+        const xhtml = `<?xml version="1.0" encoding="utf-8"?>\n<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"/><title>${escapeHtml(chap.title)}</title></head><body>${parts.join('\n')}</body></html>`;
+        return { title: chap.title, xhtml, parentIndex: chap.parentIndex };
+      });
+      const blob = await buildEpubFromChapters(bookTitle, chapterFiles, images, coverImageFilename);
+      return { content: blob, isBinary:true };
+    },
+    // 🆕 여러 언어를 한 파일에 합치기: format이 'fb2'면 원본 구조를 유지한 채 텍스트만
+    // 원문+번역어들을 순서대로 추가, 'epub'이면 각 챕터에 원문+번역어들을 순서대로 렌더링.
+    rebuildMulti: async (transList, format) => {
+      format = format || 'epub';
+      if (format === 'fb2'){
+        const xml = rebuildFb2PassthroughMulti(transList);
+        return { content: xml, isBinary:false };
+      }
+      const chapterFiles = kept.map(chap=>{
+        const parts = renderNodesToXhtmlPartsMulti(chap.nodes, transList);
         const xhtml = `<?xml version="1.0" encoding="utf-8"?>\n<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"/><title>${escapeHtml(chap.title)}</title></head><body>${parts.join('\n')}</body></html>`;
         return { title: chap.title, xhtml, parentIndex: chap.parentIndex };
       });
@@ -1448,6 +1640,11 @@ async function runTranslation(files){
     }
     if (!parsed.blocks.length){ appendLog(`⚠️ ${file.name}: 번역할 텍스트 블록을 찾지 못했습니다.`); }
 
+    // 🆕 여러 언어를 한 파일에 합치기 모드: 슬롯이 2개 이상이고 토글이 켜져 있으면
+    // 슬롯별로 번역만 각각 수행하고, 파일별 출력은 마지막에 한 번만 만든다.
+    const mergeMode = !!(file.mergeLangs && file.slots.length > 1);
+    const slotResults = []; // mergeMode에서만 사용: [{target, translations}, ...] 슬롯 순서대로
+
     for (const slot of file.slots){
       const job = jobs[jobPtr++];
       const tag = job.label;
@@ -1468,14 +1665,20 @@ async function runTranslation(files){
           Object.keys(translations).forEach(id=>{ translations[id] = tryNarrativeStyle(translations[id]); });
         }
 
-        const { content, isBinary } = await parsed.rebuild(translations, slot.position, file.fb2OutputFormat || 'epub');
-        const outExt = (file.ext === 'fb2') ? (file.fb2OutputFormat==='fb2' ? 'fb2' : 'epub') : file.ext;
-        const outName = `${file.outputBaseName}${file.addLangSuffix ? '_'+slot.target : ''}.${outExt}`;
-        zip.file(outName, content);
-        const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
-        const url = URL.createObjectURL(blobForLink);
-        resultItems.push({ name: outName, url });
-        appendLog(`✅ ${outName} 생성 완료 (${parsed.blocks.length}개 블록)`);
+        if (mergeMode){
+          // 합치기 모드에서는 개별 파일을 만들지 않고 번역 결과만 모아둔다.
+          slotResults.push({ target: slot.target, translations });
+          appendLog(`✅ ${tag} 번역 완료 (병합 대기 중)`);
+        } else {
+          const { content, isBinary } = await parsed.rebuild(translations, slot.position, file.fb2OutputFormat || 'epub');
+          const outExt = (file.ext === 'fb2') ? (file.fb2OutputFormat==='fb2' ? 'fb2' : 'epub') : file.ext;
+          const outName = `${file.outputBaseName}${file.addLangSuffix ? '_'+slot.target : ''}.${outExt}`;
+          zip.file(outName, content);
+          const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
+          const url = URL.createObjectURL(blobForLink);
+          resultItems.push({ name: outName, url });
+          appendLog(`✅ ${outName} 생성 완료 (${parsed.blocks.length}개 블록)`);
+        }
         job.status = 'done';
       } catch(e){
         appendLog(`❌ ${tag} 번역 실패: ${e.message}`);
@@ -1485,6 +1688,24 @@ async function runTranslation(files){
       setProgress(Math.round(jobIndex/totalJobs*100));
       renderResultsList(resultItems);
       renderJobList(jobs);
+    }
+
+    // 🆕 합치기 모드: 슬롯 번역이 전부 끝난 뒤, 원문+번역어들을 한 파일로 합쳐서 출력한다.
+    if (mergeMode && slotResults.length){
+      try{
+        const { content, isBinary } = await parsed.rebuildMulti(slotResults, file.fb2OutputFormat || 'epub');
+        const outExt = (file.ext === 'fb2') ? (file.fb2OutputFormat==='fb2' ? 'fb2' : 'epub') : file.ext;
+        const langsSuffix = slotResults.map(s=>s.target).join('_');
+        const outName = `${file.outputBaseName}${file.addLangSuffix ? '_'+langsSuffix : ''}.${outExt}`;
+        zip.file(outName, content);
+        const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
+        const url = URL.createObjectURL(blobForLink);
+        resultItems.push({ name: outName, url });
+        appendLog(`✅ ${outName} 생성 완료 (병합 파일, ${parsed.blocks.length}개 블록 × ${slotResults.length}개 언어)`);
+      } catch(e){
+        appendLog(`❌ ${file.name} 병합 파일 생성 실패: ${e.message}`);
+      }
+      renderResultsList(resultItems);
     }
   }
 
