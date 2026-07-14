@@ -681,7 +681,7 @@ function parseSRT(raw){
           const tr = t.translations[e.id];
           if (tr!==undefined) lines.push(tr);
         });
-        return `${e.index}\n${e.time}\n${lines.join('\n').trim()}`;
+        return `${e.index}\n${e.time}\n${lines.join('\n---\n').trim()}`;
       });
       return { content: out.join('\n\n')+'\n', isBinary:false };
     }
@@ -732,7 +732,7 @@ function parseVTT(raw){
           if (tr!==undefined) lines.push(tr);
         });
         const idLine = e.cueId ? e.cueId+'\n' : '';
-        return `${idLine}${e.timeLine}\n${lines.join('\n').trim()}`;
+        return `${idLine}${e.timeLine}\n${lines.join('\n---\n').trim()}`;
       }).join('\n\n');
       return { content: 'WEBVTT\n\n'+body+'\n', isBinary:false };
     }
@@ -766,7 +766,7 @@ function parseTXT(raw){
           const tr = t.translations[b.id];
           if (tr!==undefined) lines.push(tr);
         });
-        return lines.join('\n');
+        return lines.join('\n---\n');
       });
       return { content: out.join('\n\n')+'\n', isBinary:false };
     }
