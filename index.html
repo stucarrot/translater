@@ -1358,16 +1358,48 @@ function stripNonPrintable(text){
    검증된 값이라 그대로 재사용한다. 문장 경계에서 우선 자르고, 문장부호 없이
    SAFE_LEN보다 긴 한 "문장"이 있으면 최후 수단으로 강제로 자른다. */
 const SAFE_LEN = 1800;
+/* 🆕 문장 경계 정규식: 기존엔 마침표 뒤에 공백이 최소 1개 있어야만 문장 경계로
+   인정했는데(\s+), OCR로 뽑은 텍스트는 "...страны.Дляжителей..."처럼 마침표
+   직후 공백 없이 바로 다음 문장(대문자로 시작)이 붙어있는 경우가 흔하다(이번
+   대화에서 실제로 발견된 케이스). 그런 텍스트는 마침표+공백 조합을 못 찾아서
+   문장이 통째로 하나로 뭉치고, 그 결과 강제 글자수 분할(아래)로 넘어가 단어가
+   중간에 잘리는 원인이 됐다. \s*(대문자 앞) 형태로 완화해서 공백 없는 마침표도
+   문장 경계로 인식하게 한다. u플래그 + \p{Lu}(임의 스크립트의 대문자, 키릴 포함). */
+const SENTENCE_SPLIT_RE = /(?<=[.!?…"'"'`”)\]])\s*(?=$|\p{Lu}|["'"'`“(])/gu;
+/* 🆕 강제 분할(문장 하나가 그 자체로 maxLen을 넘는 경우)도 이제 무조건 글자수로
+   뚝 자르지 않는다. 우선순위: ①직전 문장부호(.!?… 등) 경계 → ②직전 공백(단어
+   경계) → ③그래도 못 찾으면(공백이 단 하나도 없는 극단적 케이스) 최후 수단으로
+   글자수 강제 절단. 즉 단어도, 문장도 웬만하면 안 끊긴다. */
+function findSafeBreak(s, maxLen){
+  const window = s.slice(0, maxLen);
+  // ① 문장부호 경계: window 안에서 가장 마지막에 나오는 문장 끝 지점을 찾는다
+  const endRe = /[.!?…][”"'’)\]]*/g;
+  let lastSentenceEnd = -1, m;
+  while ((m = endRe.exec(window))){
+    lastSentenceEnd = m.index + m[0].length;
+  }
+  if (lastSentenceEnd > 0) return lastSentenceEnd;
+  // ② 단어 경계: window 안에서 가장 마지막 공백
+  const lastSpace = window.lastIndexOf(' ');
+  if (lastSpace > 0) return lastSpace;
+  const lastNewline = Math.max(window.lastIndexOf('\n'), window.lastIndexOf('\t'));
+  if (lastNewline > 0) return lastNewline;
+  // ③ 최후 수단: 공백/문장부호가 정말 하나도 없는 경우(예: 공백 없는 긴 URL,
+  // 혹은 OCR이 공백까지 통째로 날려버린 극단적 케이스)에만 글자수로 절단
+  return maxLen;
+}
 function splitForSafeTranslate(text, maxLen){
   if (text.length <= maxLen) return [text];
-  const sentences = text.split(/(?<=[.!?…"'"'`”)\]])\s+/);
+  const sentences = text.split(SENTENCE_SPLIT_RE);
   const pieces = [];
   let cur = '';
   for (let s of sentences){
     while (s.length > maxLen){
       if (cur){ pieces.push(cur); cur = ''; }
-      pieces.push(s.slice(0, maxLen));
-      s = s.slice(maxLen);
+      const cut = findSafeBreak(s, maxLen);
+      const piece = s.slice(0, cut).trimEnd();
+      if (piece) pieces.push(piece);
+      s = s.slice(cut).trimStart();
     }
     if (cur && (cur.length + 1 + s.length) > maxLen){
       pieces.push(cur);
