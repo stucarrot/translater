@@ -274,23 +274,41 @@
         </div>
         <div id="geminiFieldsBox" style="margin-top:8px; display:none; flex-direction:column; gap:8px; font-size:12px;">
           <label style="display:flex; flex-direction:column; gap:3px;">
-            API 키 (이 브라우저에만 저장, 코드/서버로 전송 안 됨)
-            <div style="display:flex; gap:6px;">
-              <input type="password" id="geminiApiKeyInput" placeholder="Google AI Studio에서 발급받은 API 키" autocomplete="off" style="flex:1; min-width:0; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:12px;"/>
-              <button type="button" id="geminiApiKeyToggleBtn" title="키 표시/숨기기" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">👁</button>
-              <button type="button" id="geminiApiKeyClearBtn" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">지우기</button>
+            API 키 (한 줄에 하나씩, 여러 개 등록 가능 — 브라우저 메모리(localStorage)에만 저장, 코드/서버로 전송 안 됨)
+            <div style="display:flex; gap:6px; align-items:flex-start;">
+              <textarea id="geminiApiKeyInput" rows="3" placeholder="AIzaSy... (키 1)&#10;AIzaSy... (키 2, 선택)" autocomplete="off" spellcheck="false" style="flex:1; min-width:0; resize:vertical; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:12px; font-family:monospace; line-height:1.5; transition:filter .15s;"></textarea>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <button type="button" id="geminiApiKeyToggleBtn" title="키 표시/숨기기" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">👁</button>
+                <button type="button" id="geminiApiKeyClearBtn" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">지우기</button>
+              </div>
             </div>
+            <span id="geminiKeyCountNote" style="font-size:11px; color:var(--text-dim);"></span>
           </label>
           <label style="display:flex; flex-direction:column; gap:3px;">
             모델명 (선택, 비워두면 기본값 사용)
             <input type="text" id="geminiModelInput" placeholder="기본: gemini-flash-latest" style="padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:12px;"/>
           </label>
           <div style="display:flex; align-items:center; gap:8px;">
-            <button type="button" id="geminiTestBtn" style="font-size:11.5px; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">🔎 연결 테스트</button>
+            <button type="button" id="geminiTestBtn" style="font-size:11.5px; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">🔎 키 전체 연결 테스트</button>
             <span id="geminiTestResult" style="font-size:11.5px; color:var(--text-dim);"></span>
           </div>
+          <label style="display:flex; flex-direction:column; gap:3px; margin-top:4px; padding-top:8px; border-top:1px solid var(--border-soft);">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>자막(.srt/.vtt)용 번역 프롬프트 (직접 수정 가능)</span>
+              <button type="button" id="geminiSubtitlePromptResetBtn" style="font-size:10.5px; padding:2px 7px; border-radius:5px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">기본값으로</button>
+            </div>
+            <textarea id="geminiSubtitlePromptInput" rows="8" spellcheck="false" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:11.5px; font-family:monospace; line-height:1.5; resize:vertical;"></textarea>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:3px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>문서(.txt/.epub/.fb2)용 번역 프롬프트 (직접 수정 가능)</span>
+              <button type="button" id="geminiDocumentPromptResetBtn" style="font-size:10.5px; padding:2px 7px; border-radius:5px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">기본값으로</button>
+            </div>
+            <textarea id="geminiDocumentPromptInput" rows="8" spellcheck="false" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:11.5px; font-family:monospace; line-height:1.5; resize:vertical;"></textarea>
+          </label>
+          <div class="vocab-note">프롬프트 안의 <code>{{SRC}}</code>·<code>{{TGT}}</code>는 각각 출발/도착 언어명, <code>{{TEXT}}</code>는 실제 원문으로 자동 치환됩니다. <code>{{TEXT}}</code>를 지워도 번역이 깨지지 않게 뒤에 원문을 안전하게 덧붙이지만, 위치를 제어하려면 남겨두는 걸 권장합니다. 마커 보존 규칙 줄은 되도록 남겨두세요 — 지우면 자막 타이밍/문단 매칭이 깨질 수 있습니다. 수정 즉시 저장되며, 다음 번역부터 바로 적용됩니다.</div>
         </div>
-        <div class="vocab-note" id="geminiStatusNote">켜면 모든 번역 요청이 무료 구글 엔드포인트 대신 입력한 API 키로 Gemini(Google AI Studio)에 직접 전송됩니다(우선순위 최상단 — 위의 "새 엔드포인트" 옵션보다 먼저 시도됨). 요청이 실패하면 그 호출만 자동으로 기존 구글 번역으로 폴백합니다. API 키는 <code>localStorage</code>에만 저장되며 이 코드 자체에는 들어가지 않습니다. LLM 특성상 자막 마커(‖0‖ 등)나 글로서리 치환용 토큰이 가끔 변형될 수 있어, 자막(SRT/VTT)보다 문서(EPUB/FB2/TXT) 번역에 더 안전합니다.</div>
+        <div class="vocab-note" id="geminiStatusNote">켜면 모든 번역 요청이 무료 구글 엔드포인트 대신 입력한 API 키로 Gemini(Google AI Studio)에 직접 전송됩니다(우선순위 최상단 — 위의 "새 엔드포인트" 옵션보다 먼저 시도됨). 키를 여러 줄로 여러 개 등록하면 요청마다 돌아가며 사용하고, 한 키가 쿼터 초과(429) 등으로 실패하면 같은 요청 안에서 자동으로 다음 키를 시도합니다. 등록된 모든 키가 실패해야 그 호출만 기존 구글 번역으로 폴백합니다. 키는 <code>localStorage</code>에만 저장되며 이 코드 자체에는 들어가지 않습니다. 자막과 문서는 서로 다른 프롬프트(아래)를 쓰며, 러시아어 원문에 대한 말투·생략 주어·인명 표기 지침이 기본으로 들어가 있습니다 — 다른 언어쌍에도 그대로 써도 무방합니다.</div>
       </details>
 
       <div class="run-panel">
@@ -356,15 +374,84 @@ const advancedOpts = {
 };
 /* 🆕 Gemini API 키는 민감정보라 advancedOpts(메모리 전용 설정 객체)와 분리해서 관리.
    서버가 없는 단일 HTML 구조라, 코드/깃에는 절대 넣지 않고 사용자가 직접 입력 →
-   이 브라우저의 localStorage에만 저장(인수인계서 5장의 일반론과 동일한 방식). */
+   이 브라우저의 localStorage에만 저장(인수인계서 5장의 일반론과 동일한 방식).
+   여러 키를 줄바꿈으로 등록할 수 있게, 원본 텍스트(geminiApiKeysRaw)를 그대로 저장하고
+   실제 사용 시점(getGeminiKeys)에 줄 단위로 잘라서 배열로 만든다. */
 const GEMINI_KEY_STORAGE = 'translatorGeminiApiKey';
 const GEMINI_MODEL_STORAGE = 'translatorGeminiModel';
-let geminiApiKey = '';
-try { geminiApiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || ''; } catch(e){ /* localStorage 접근 불가 환경(예: 일부 프라이빗 모드) — 조용히 빈 값 유지 */ }
+let geminiApiKeysRaw = '';
+try { geminiApiKeysRaw = localStorage.getItem(GEMINI_KEY_STORAGE) || ''; } catch(e){ /* localStorage 접근 불가 환경(예: 일부 프라이빗 모드) — 조용히 빈 값 유지 */ }
+function getGeminiKeys(){
+  return geminiApiKeysRaw.split('\n').map(s => s.trim()).filter(Boolean);
+}
+let geminiKeyRRIndex = 0; // 🆕 여러 키를 돌아가며 쓰기 위한 라운드로빈 포인터(세션 메모리 전용, 저장 안 함)
 try {
   const savedModel = localStorage.getItem(GEMINI_MODEL_STORAGE) || '';
   if (savedModel) advancedOpts.geminiModel = savedModel;
 } catch(e){}
+
+/* 🆕 Gemini 번역 프롬프트: 자막(.srt/.vtt)과 문서(.txt/.epub/.fb2)는 요구되는 문체·제약이
+   달라서 템플릿을 따로 둔다. {{SRC}}/{{TGT}}는 언어명, {{TEXT}}는 원문으로 치환된다.
+   두 템플릿 다 마커/글로서리 토큰 보존 규칙은 공통으로 넣어야 안전하다(마커가 깨지면
+   자막 타이밍/문단 매칭이 어긋남) — 그래서 기본값에 이미 포함해뒀고, 사용자가 수정할 때도
+   이 규칙 문구는 되도록 남겨두길 권장(안내문에도 명시). 러시아어 관련 지침은 요청으로 추가한 것.
+   러시아어가 아닌 다른 언어쌍에도 그대로 써도 무방(해당 규칙은 원문이 러시아어일 때만 적용되는
+   조건문 형태라, 다른 언어면 모델이 알아서 무시함). */
+const GEMINI_MARKER_RULE =
+  '- "‖0‖", "‖1‖", "@@", "###", "%%%", "|||", "◆GL0◆" 같은 형태의 특수 토큰/마커가 텍스트 안에 있으면 절대로 번역하거나 형태를 바꾸지 말고 원래 있던 위치에 정확히 그대로 남겨두세요.';
+const DEFAULT_GEMINI_SUBTITLE_PROMPT = [
+  '당신은 전문 영상 자막 번역가입니다. 아래 텍스트를 {{SRC}}에서 {{TGT}}로 번역하세요.',
+  '',
+  '규칙:',
+  '- 번역된 자막 텍스트만 출력하세요. 설명, 인용부호, 마크다운, 원문 재출력 금지.',
+  GEMINI_MARKER_RULE,
+  '- 줄바꿈 구조를 원문과 동일하게 유지하세요.',
+  '- 실제 구어체 대사처럼 자연스럽고 간결하게 옮기세요. 시청자가 짧은 시간에 읽어야 하므로 불필요하게 길어지지 않게 하세요.',
+  '- 원문이 러시아어라면: ты(반말)/вы(존댓말) 구분과 화자 간 관계·상황에 맞는 말투(반말/존댓말, 명령형 어미 등)를 자연스러운 한국어로 살리고, 감탄사·욕설·비속어의 뉘앙스 강도를 과장하거나 순화하지 말고 비슷한 수위로 옮기세요. 러시아어 특유의 생략된 주어는 문맥상 자연스럽게 보충하세요. 인명/지명은 한국에서 통용되는 러시아어 외래어 표기법을 따르세요.',
+  '',
+  '--- 원문 시작 ---',
+  '{{TEXT}}',
+  '--- 원문 끝 ---'
+].join('\n');
+const DEFAULT_GEMINI_DOCUMENT_PROMPT = [
+  '당신은 전문 문헌 번역가입니다. 아래 텍스트를 {{SRC}}에서 {{TGT}}로 번역하세요.',
+  '',
+  '규칙:',
+  '- 번역된 텍스트만 출력하세요. 설명, 인용부호, 마크다운, 원문 재출력 금지.',
+  GEMINI_MARKER_RULE,
+  '- 문단/줄바꿈 구조를 원문과 동일하게 유지하고, 문체(격식체/구어체/문어체)를 원문 전체에 걸쳐 일관되게 유지하세요.',
+  '- 원문이 러시아어라면: 격변화 때문에 생략되기 쉬운 주어/목적어를 문맥에 맞게 자연스러운 한국어로 보충하고, 관용구·속담은 단어 그대로 직역하기보다 의미가 통하는 한국어 표현으로 옮기세요. 인명/지명은 한국에서 통용되는 러시아어 외래어 표기법을 따르고, 앞서 등장한 표기와 이 문서 안에서 일관성을 유지하세요.',
+  '',
+  '--- 원문 시작 ---',
+  '{{TEXT}}',
+  '--- 원문 끝 ---'
+].join('\n');
+const GEMINI_SUBTITLE_PROMPT_STORAGE = 'translatorGeminiSubtitlePrompt';
+const GEMINI_DOCUMENT_PROMPT_STORAGE = 'translatorGeminiDocumentPrompt';
+let geminiSubtitlePromptTemplate = DEFAULT_GEMINI_SUBTITLE_PROMPT;
+let geminiDocumentPromptTemplate = DEFAULT_GEMINI_DOCUMENT_PROMPT;
+try {
+  const savedSub = localStorage.getItem(GEMINI_SUBTITLE_PROMPT_STORAGE);
+  if (savedSub) geminiSubtitlePromptTemplate = savedSub;
+  const savedDoc = localStorage.getItem(GEMINI_DOCUMENT_PROMPT_STORAGE);
+  if (savedDoc) geminiDocumentPromptTemplate = savedDoc;
+} catch(e){}
+/* kind: 'subtitle'|'document' (그 외/생략이면 문서용 템플릿). {{SRC}}/{{TGT}}는 언어명으로,
+   {{TEXT}}는 실제 원문으로 치환한다. 사용자가 템플릿을 편집하다 실수로 {{TEXT}}를 지워도
+   번역 자체가 깨지지 않도록, 그럴 땐 프롬프트 뒤에 원문 구획을 안전하게 덧붙인다. */
+function buildGeminiPrompt(kind, sl, tl, text){
+  const template = (kind === 'subtitle' ? geminiSubtitlePromptTemplate : geminiDocumentPromptTemplate) || DEFAULT_GEMINI_DOCUMENT_PROMPT;
+  const srcName = (sl === 'auto') ? '원문 그대로의 언어(자동 감지)' : langName(sl);
+  const tgtName = langName(tl);
+  let prompt = template.split('{{SRC}}').join(srcName).split('{{TGT}}').join(tgtName);
+  if (prompt.indexOf('{{TEXT}}') !== -1){
+    prompt = prompt.split('{{TEXT}}').join(text);
+  } else {
+    prompt += '\n\n--- 원문 시작 ---\n' + text + '\n--- 원문 끝 ---';
+  }
+  return prompt;
+}
+
 (function initAdvancedPanel(){
   const enabledChk = document.getElementById('advEnabledChk');
   const grid = document.getElementById('advFieldsGrid');
@@ -377,28 +464,71 @@ try {
   const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
   const geminiApiKeyToggleBtn = document.getElementById('geminiApiKeyToggleBtn');
   const geminiApiKeyClearBtn = document.getElementById('geminiApiKeyClearBtn');
+  const geminiKeyCountNote = document.getElementById('geminiKeyCountNote');
   const geminiModelInput = document.getElementById('geminiModelInput');
   const geminiTestBtn = document.getElementById('geminiTestBtn');
   const geminiTestResult = document.getElementById('geminiTestResult');
+  const geminiSubtitlePromptInput = document.getElementById('geminiSubtitlePromptInput');
+  const geminiDocumentPromptInput = document.getElementById('geminiDocumentPromptInput');
+  const geminiSubtitlePromptResetBtn = document.getElementById('geminiSubtitlePromptResetBtn');
+  const geminiDocumentPromptResetBtn = document.getElementById('geminiDocumentPromptResetBtn');
+  geminiSubtitlePromptInput.value = geminiSubtitlePromptTemplate;
+  geminiDocumentPromptInput.value = geminiDocumentPromptTemplate;
+  geminiSubtitlePromptInput.addEventListener('input', e=>{
+    geminiSubtitlePromptTemplate = e.target.value;
+    try { localStorage.setItem(GEMINI_SUBTITLE_PROMPT_STORAGE, geminiSubtitlePromptTemplate); } catch(err){}
+  });
+  geminiDocumentPromptInput.addEventListener('input', e=>{
+    geminiDocumentPromptTemplate = e.target.value;
+    try { localStorage.setItem(GEMINI_DOCUMENT_PROMPT_STORAGE, geminiDocumentPromptTemplate); } catch(err){}
+  });
+  geminiSubtitlePromptResetBtn.addEventListener('click', ()=>{
+    geminiSubtitlePromptTemplate = DEFAULT_GEMINI_SUBTITLE_PROMPT;
+    geminiSubtitlePromptInput.value = DEFAULT_GEMINI_SUBTITLE_PROMPT;
+    try { localStorage.removeItem(GEMINI_SUBTITLE_PROMPT_STORAGE); } catch(err){}
+  });
+  geminiDocumentPromptResetBtn.addEventListener('click', ()=>{
+    geminiDocumentPromptTemplate = DEFAULT_GEMINI_DOCUMENT_PROMPT;
+    geminiDocumentPromptInput.value = DEFAULT_GEMINI_DOCUMENT_PROMPT;
+    try { localStorage.removeItem(GEMINI_DOCUMENT_PROMPT_STORAGE); } catch(err){}
+  });
+  let geminiKeysHidden = true; // 🆕 기본은 흐림 처리(어깨너머 노출 방지), 포커스하면 자동으로 선명해짐
+  function refreshGeminiKeyCountNote(){
+    const n = getGeminiKeys().length;
+    geminiKeyCountNote.textContent = n ? `등록된 키 ${n}개 (요청마다 돌아가며 사용, 실패 시 다음 키로 자동 전환)` : '등록된 키 없음';
+  }
+  function applyGeminiBlur(){
+    geminiApiKeyInput.style.filter = geminiKeysHidden ? 'blur(5px)' : 'none';
+  }
   // 저장된 값(있으면) 입력창에 반영
-  geminiApiKeyInput.value = geminiApiKey;
+  geminiApiKeyInput.value = geminiApiKeysRaw;
   geminiModelInput.value = advancedOpts.geminiModel || '';
+  applyGeminiBlur();
+  refreshGeminiKeyCountNote();
   geminiEnabledChk.addEventListener('change', e=>{
     advancedOpts.useGeminiApi = e.target.checked;
     geminiFieldsBox.style.display = e.target.checked ? 'flex' : 'none';
   });
   geminiApiKeyInput.addEventListener('input', e=>{
-    geminiApiKey = e.target.value.trim();
-    try { localStorage.setItem(GEMINI_KEY_STORAGE, geminiApiKey); } catch(err){}
+    geminiApiKeysRaw = e.target.value;
+    try { localStorage.setItem(GEMINI_KEY_STORAGE, geminiApiKeysRaw); } catch(err){}
+    geminiKeyRRIndex = 0; // 키 목록이 바뀌면 로테이션 포인터 리셋
+    refreshGeminiKeyCountNote();
     geminiTestResult.textContent = '';
   });
+  geminiApiKeyInput.addEventListener('focus', ()=>{ geminiApiKeyInput.style.filter = 'none'; });
+  geminiApiKeyInput.addEventListener('blur', applyGeminiBlur);
   geminiApiKeyToggleBtn.addEventListener('click', ()=>{
-    geminiApiKeyInput.type = geminiApiKeyInput.type === 'password' ? 'text' : 'password';
+    geminiKeysHidden = !geminiKeysHidden;
+    geminiApiKeyToggleBtn.textContent = geminiKeysHidden ? '👁' : '🙈';
+    applyGeminiBlur();
   });
   geminiApiKeyClearBtn.addEventListener('click', ()=>{
-    geminiApiKey = '';
+    geminiApiKeysRaw = '';
     geminiApiKeyInput.value = '';
     try { localStorage.removeItem(GEMINI_KEY_STORAGE); } catch(err){}
+    geminiKeyRRIndex = 0;
+    refreshGeminiKeyCountNote();
     geminiTestResult.textContent = '';
   });
   geminiModelInput.addEventListener('input', e=>{
@@ -406,17 +536,26 @@ try {
     try { localStorage.setItem(GEMINI_MODEL_STORAGE, advancedOpts.geminiModel); } catch(err){}
   });
   geminiTestBtn.addEventListener('click', async ()=>{
-    if (!geminiApiKey){
+    const keys = getGeminiKeys();
+    if (!keys.length){
       geminiTestResult.textContent = '⚠️ API 키를 먼저 입력하세요.';
       return;
     }
-    geminiTestResult.textContent = '테스트 중...';
-    try {
-      const r = await gtranslateRawGemini('안녕하세요, 만나서 반갑습니다.', 'ko', 'en');
-      geminiTestResult.textContent = '✅ 성공: "' + r.translated.slice(0, 60) + '"';
-    } catch (err){
-      geminiTestResult.textContent = '❌ 실패: ' + err.message;
+    let ok = 0, fail = 0;
+    const failMsgs = [];
+    for (let i = 0; i < keys.length; i++){
+      geminiTestResult.textContent = `테스트 중... (${i + 1}/${keys.length})`;
+      try {
+        await gtranslateRawGeminiWithKey('안녕하세요, 만나서 반갑습니다.', 'ko', 'en', keys[i]);
+        ok++;
+      } catch (err){
+        fail++;
+        failMsgs.push(`#${i + 1}: ${err.message}`);
+      }
     }
+    let msg = `✅ ${ok}개 정상`;
+    if (fail) msg += ` / ❌ ${fail}개 실패 (${failMsgs.slice(0, 2).join('; ')}${failMsgs.length > 2 ? ' 외' : ''})`;
+    geminiTestResult.textContent = msg;
   });
   const fieldMap = {
     advTargetSize:'targetSize', advMaxSize:'maxSize', advMaxChars:'maxChars',
@@ -1510,10 +1649,10 @@ function splitForSafeTranslate(text, maxLen){
 }
 /* SAFE_LEN을 넘는 텍스트는 조각내서 순서대로 번역한 뒤 이어붙인다. 조각별
    요청은 병렬로 보내되(속도), 결과는 원래 순서를 지켜서 합친다(정확성). */
-async function gtranslateSafe(text, sl, tl){
+async function gtranslateSafe(text, sl, tl, kind){
   const pieces = splitForSafeTranslate(text, SAFE_LEN);
-  if (pieces.length === 1) return gtranslateRaw(pieces[0], sl, tl);
-  const results = await Promise.all(pieces.map(p => gtranslateRaw(p, sl, tl)));
+  if (pieces.length === 1) return gtranslateRaw(pieces[0], sl, tl, kind);
+  const results = await Promise.all(pieces.map(p => gtranslateRaw(p, sl, tl, kind)));
   const translated = results.map(r => r.translated).join(' ');
   const detected = (results.find(r => r.detected) || {}).detected || null;
   return { translated, detected };
@@ -1573,27 +1712,16 @@ async function gtranslateRawOld(text, sl, tl){
   return { translated, detected };
 }
 
-/* 🆕 Google AI Studio(Gemini) API로 번역. 무료 구글 번역(NMT)과 달리 LLM이라 문맥/문체
-   반영은 기대할 수 있지만, 마커(‖0‖ 등)·글로서리 플레이스홀더(◆GL0◆ 등)를 프롬프트 규칙만으로
-   강제하는 것이라 100% 보장은 아님 — 실패(빈 응답/HTTP 오류)는 상위 gtranslateRaw가 잡아서
-   기존 구글 엔드포인트로 폴백한다. 사용자가 직접 입력한 API 키(geminiApiKey)가 있을 때만 호출됨. */
-async function gtranslateRawGemini(text, sl, tl){
+/* 🆕 Google AI Studio(Gemini) API로 번역(키 1개 기준). 무료 구글 번역(NMT)과 달리 LLM이라
+   문맥/문체 반영은 기대할 수 있지만, 마커(‖0‖ 등)·글로서리 플레이스홀더(◆GL0◆ 등)를 프롬프트
+   규칙만으로 강제하는 것이라 100% 보장은 아님. apiKey를 명시적으로 받아서, 여러 키를 돌아가며
+   시도하는 gtranslateRawGemini()와 "연결 테스트" 버튼(키별 개별 테스트) 양쪽에서 재사용한다.
+   kind는 'subtitle'|'document' — 자막/문서용으로 따로 편집 가능한 프롬프트 템플릿(아래 buildGeminiPrompt
+   참고)을 골라 쓰기 위한 값이며, 생략되면 문서용 템플릿을 기본으로 쓴다. */
+async function gtranslateRawGeminiWithKey(text, sl, tl, apiKey, kind){
   const model = (advancedOpts.geminiModel && advancedOpts.geminiModel.trim()) || 'gemini-flash-latest';
-  const srcName = (sl === 'auto') ? '원문 그대로의 언어(자동 감지)' : langName(sl);
-  const tgtName = langName(tl);
-  const prompt = [
-    `다음 텍스트를 ${srcName}에서 ${tgtName}로 번역하세요.`,
-    '규칙:',
-    '- 번역된 결과 텍스트만 출력하세요. 설명, 인용부호, 마크다운 코드블록, 원문 재출력 금지.',
-    '- "‖0‖", "‖1‖", "@@", "###", "%%%", "|||", "◆GL0◆" 같은 형태의 특수 토큰/마커가 텍스트 안에 있으면',
-    '  절대로 번역하거나 형태를 바꾸지 말고 원래 있던 위치에 정확히 그대로 남겨두세요.',
-    '- 줄바꿈 구조를 원문과 동일하게 유지하세요.',
-    '',
-    '--- 원문 시작 ---',
-    text,
-    '--- 원문 끝 ---'
-  ].join('\n');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
+  const prompt = buildGeminiPrompt(kind, sl, tl, text);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1621,6 +1749,28 @@ async function gtranslateRawGemini(text, sl, tl){
   return { translated: translated.trim(), detected: null };
 }
 
+/* 🆕 등록된 여러 키를 라운드로빈으로 돌려쓰는 래퍼. 한 키가 실패(쿼터 초과 429, 키 오류 등)하면
+   같은 요청 안에서 다음 키로 자동 재시도하고, 성공한 다음 호출은 그 다음 키부터 시작해 부하를
+   분산시킨다. 등록된 키가 모두 실패해야 예외를 던지고, 그건 상위 gtranslateRaw가 잡아서
+   기존 구글 무료 엔드포인트로 폴백한다. */
+async function gtranslateRawGemini(text, sl, tl, kind){
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error('등록된 Gemini API 키가 없습니다.');
+  const startIdx = geminiKeyRRIndex % keys.length;
+  let lastErr = null;
+  for (let i = 0; i < keys.length; i++){
+    const idx = (startIdx + i) % keys.length;
+    try {
+      const result = await gtranslateRawGeminiWithKey(text, sl, tl, keys[idx], kind);
+      geminiKeyRRIndex = (idx + 1) % keys.length;
+      return result;
+    } catch (e){
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('모든 Gemini API 키 호출 실패');
+}
+
 async function ensureNewEndpointProbed(){
   if (newEndpointStatus !== null) return newEndpointStatus;
   if (!newEndpointProbePromise){
@@ -1638,11 +1788,11 @@ async function ensureNewEndpointProbed(){
   return newEndpointProbePromise;
 }
 
-async function gtranslateRaw(text, sl, tl){
+async function gtranslateRaw(text, sl, tl, kind){
   text = stripNonPrintable(text);
-  if (advancedOpts.useGeminiApi && geminiApiKey){
+  if (advancedOpts.useGeminiApi && getGeminiKeys().length){
     try {
-      return await gtranslateRawGemini(text, sl, tl);
+      return await gtranslateRawGemini(text, sl, tl, kind);
     } catch (e){
       // Gemini 호출 실패(키 오류/네트워크/빈 응답 등)는 이 요청만 기존 구글 번역으로
       // 조용히 폴백한다 — 세션 전체를 막지 않고 번역이 계속 진행되게 함.
@@ -1699,7 +1849,7 @@ async function translateWindowMarked(windowBlocks, sourceLang, targetLang){
     try{
       const marked = buildMarkedText(windowBlocks, anchor);
       if (marked.length > SAFE_LEN) return null; // 너무 길면 마커 방식 포기 → 개별 폴백(gtranslateSafe)이 안전하게 분할 처리
-      const { translated, detected } = await gtranslateRaw(marked, sourceLang, targetLang);
+      const { translated, detected } = await gtranslateRaw(marked, sourceLang, targetLang, 'subtitle');
       const parsed = parseMarkedText(translated, windowBlocks.length, anchor);
       if (parsed){
         workingAnchorByPair[pairKey] = anchor;
@@ -2037,7 +2187,7 @@ async function translateBlocks(blocks, sourceLang, targetLang, onProgress, chunk
   // 원문 b.text 하나를 안전하게(글로서리 보호 → 번역 → 복원) 개별 번역
   async function translateOneSafe(b){
     const { protectedText, restores } = protectGlossary(b.text, gloss);
-    const { translated, detected } = await gtranslateSafe(protectedText, sourceLang, targetLang);
+    const { translated, detected } = await gtranslateSafe(protectedText, sourceLang, targetLang, 'subtitle');
     const { text: finalText } = finalizeGlossary(translated, restores, gloss);
     return { text: finalText, detected };
   }
@@ -2165,12 +2315,12 @@ async function translateBlocksIndividual(blocks, sourceLang, targetLang, onProgr
       }
       try{
         const { protectedText, restores } = protectGlossary(b.text, gloss);
-        const { translated, detected } = await gtranslateSafe(protectedText, sourceLang, targetLang);
+        const { translated, detected } = await gtranslateSafe(protectedText, sourceLang, targetLang, 'document');
         let raw = translated;
         if (isEmptyTranslation(raw)){
           // 완전히 빈 값이면 네트워크 일시 오류일 수 있으니 한 번만 더 시도
           try{
-            const retry = await gtranslateSafe(protectedText, sourceLang, targetLang);
+            const retry = await gtranslateSafe(protectedText, sourceLang, targetLang, 'document');
             if (!isEmptyTranslation(retry.translated)) raw = retry.translated;
           } catch(e){ /* 재시도 실패 시 원래 결과(빈 값이어도) 유지 */ }
         }
