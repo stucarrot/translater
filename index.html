@@ -268,6 +268,29 @@
           <span>🆕 Google 새 엔드포인트 우선 시도 (캘리버 기본 추천값)</span>
         </div>
         <div class="vocab-note" id="newEndpointStatusNote">캘리버 번역 플러그인이 "casual user에게 추천"으로 명시한 translate-pa.googleapis.com 엔드포인트를 먼저 써봅니다. 번역 시작 시 1회 접속 테스트 후, 되면 계속 이걸 쓰고 브라우저 CORS 등으로 막히면 자동으로 기존 방식(translate_a/single)으로 전환됩니다 — 상태는 여기 표시됩니다.</div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border-soft); display:flex; align-items:center; gap:6px; font-size:12.5px;">
+          <label class="switch"><input type="checkbox" id="geminiEnabledChk"/><span class="slider"></span></label>
+          <span>🆕 Google AI Studio(Gemini) API로 번역 (내 API 키 사용)</span>
+        </div>
+        <div id="geminiFieldsBox" style="margin-top:8px; display:none; flex-direction:column; gap:8px; font-size:12px;">
+          <label style="display:flex; flex-direction:column; gap:3px;">
+            API 키 (이 브라우저에만 저장, 코드/서버로 전송 안 됨)
+            <div style="display:flex; gap:6px;">
+              <input type="password" id="geminiApiKeyInput" placeholder="Google AI Studio에서 발급받은 API 키" autocomplete="off" style="flex:1; min-width:0; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:12px;"/>
+              <button type="button" id="geminiApiKeyToggleBtn" title="키 표시/숨기기" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">👁</button>
+              <button type="button" id="geminiApiKeyClearBtn" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">지우기</button>
+            </div>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:3px;">
+            모델명 (선택, 비워두면 기본값 사용)
+            <input type="text" id="geminiModelInput" placeholder="기본: gemini-flash-latest" style="padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:12px;"/>
+          </label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" id="geminiTestBtn" style="font-size:11.5px; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">🔎 연결 테스트</button>
+            <span id="geminiTestResult" style="font-size:11.5px; color:var(--text-dim);"></span>
+          </div>
+        </div>
+        <div class="vocab-note" id="geminiStatusNote">켜면 모든 번역 요청이 무료 구글 엔드포인트 대신 입력한 API 키로 Gemini(Google AI Studio)에 직접 전송됩니다(우선순위 최상단 — 위의 "새 엔드포인트" 옵션보다 먼저 시도됨). 요청이 실패하면 그 호출만 자동으로 기존 구글 번역으로 폴백합니다. API 키는 <code>localStorage</code>에만 저장되며 이 코드 자체에는 들어가지 않습니다. LLM 특성상 자막 마커(‖0‖ 등)나 글로서리 치환용 토큰이 가끔 변형될 수 있어, 자막(SRT/VTT)보다 문서(EPUB/FB2/TXT) 번역에 더 안전합니다.</div>
       </details>
 
       <div class="run-panel">
@@ -327,8 +350,21 @@ const advancedOpts = {
   concurrency: null, contextBefore: null, contextAfter: null,
   narrativeStyle: false, // 🆕 이번 대화: 문서 번역 결과에 합니다체→하다체 실험적 후처리 적용 여부
   cacheEnabled: true, // 🆕 번역 캐시(IndexedDB) 영속화 사용 여부, 기본 켜짐
-  useNewGoogleEndpoint: true // 🆕 캘리버가 기본 추천하는 translate-pa 새 엔드포인트 우선 시도 여부, 기본 켜짐
+  useNewGoogleEndpoint: true, // 🆕 캘리버가 기본 추천하는 translate-pa 새 엔드포인트 우선 시도 여부, 기본 켜짐
+  useGeminiApi: false, // 🆕 Google AI Studio(Gemini) API로 번역할지 여부, 기본 꺼짐(체크박스로 사용자가 켬)
+  geminiModel: '' // 🆕 Gemini 모델명 오버라이드(비우면 gtranslateRawGemini 내부 기본값 사용)
 };
+/* 🆕 Gemini API 키는 민감정보라 advancedOpts(메모리 전용 설정 객체)와 분리해서 관리.
+   서버가 없는 단일 HTML 구조라, 코드/깃에는 절대 넣지 않고 사용자가 직접 입력 →
+   이 브라우저의 localStorage에만 저장(인수인계서 5장의 일반론과 동일한 방식). */
+const GEMINI_KEY_STORAGE = 'translatorGeminiApiKey';
+const GEMINI_MODEL_STORAGE = 'translatorGeminiModel';
+let geminiApiKey = '';
+try { geminiApiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || ''; } catch(e){ /* localStorage 접근 불가 환경(예: 일부 프라이빗 모드) — 조용히 빈 값 유지 */ }
+try {
+  const savedModel = localStorage.getItem(GEMINI_MODEL_STORAGE) || '';
+  if (savedModel) advancedOpts.geminiModel = savedModel;
+} catch(e){}
 (function initAdvancedPanel(){
   const enabledChk = document.getElementById('advEnabledChk');
   const grid = document.getElementById('advFieldsGrid');
@@ -336,6 +372,52 @@ const advancedOpts = {
   const cacheChk = document.getElementById('cacheEnabledChk');
   const cacheClearBtn = document.getElementById('cacheClearBtn');
   const newEndpointChk = document.getElementById('newEndpointChk');
+  const geminiEnabledChk = document.getElementById('geminiEnabledChk');
+  const geminiFieldsBox = document.getElementById('geminiFieldsBox');
+  const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+  const geminiApiKeyToggleBtn = document.getElementById('geminiApiKeyToggleBtn');
+  const geminiApiKeyClearBtn = document.getElementById('geminiApiKeyClearBtn');
+  const geminiModelInput = document.getElementById('geminiModelInput');
+  const geminiTestBtn = document.getElementById('geminiTestBtn');
+  const geminiTestResult = document.getElementById('geminiTestResult');
+  // 저장된 값(있으면) 입력창에 반영
+  geminiApiKeyInput.value = geminiApiKey;
+  geminiModelInput.value = advancedOpts.geminiModel || '';
+  geminiEnabledChk.addEventListener('change', e=>{
+    advancedOpts.useGeminiApi = e.target.checked;
+    geminiFieldsBox.style.display = e.target.checked ? 'flex' : 'none';
+  });
+  geminiApiKeyInput.addEventListener('input', e=>{
+    geminiApiKey = e.target.value.trim();
+    try { localStorage.setItem(GEMINI_KEY_STORAGE, geminiApiKey); } catch(err){}
+    geminiTestResult.textContent = '';
+  });
+  geminiApiKeyToggleBtn.addEventListener('click', ()=>{
+    geminiApiKeyInput.type = geminiApiKeyInput.type === 'password' ? 'text' : 'password';
+  });
+  geminiApiKeyClearBtn.addEventListener('click', ()=>{
+    geminiApiKey = '';
+    geminiApiKeyInput.value = '';
+    try { localStorage.removeItem(GEMINI_KEY_STORAGE); } catch(err){}
+    geminiTestResult.textContent = '';
+  });
+  geminiModelInput.addEventListener('input', e=>{
+    advancedOpts.geminiModel = e.target.value.trim();
+    try { localStorage.setItem(GEMINI_MODEL_STORAGE, advancedOpts.geminiModel); } catch(err){}
+  });
+  geminiTestBtn.addEventListener('click', async ()=>{
+    if (!geminiApiKey){
+      geminiTestResult.textContent = '⚠️ API 키를 먼저 입력하세요.';
+      return;
+    }
+    geminiTestResult.textContent = '테스트 중...';
+    try {
+      const r = await gtranslateRawGemini('안녕하세요, 만나서 반갑습니다.', 'ko', 'en');
+      geminiTestResult.textContent = '✅ 성공: "' + r.translated.slice(0, 60) + '"';
+    } catch (err){
+      geminiTestResult.textContent = '❌ 실패: ' + err.message;
+    }
+  });
   const fieldMap = {
     advTargetSize:'targetSize', advMaxSize:'maxSize', advMaxChars:'maxChars',
     advConcurrency:'concurrency', advContextBefore:'contextBefore', advContextAfter:'contextAfter'
@@ -1450,7 +1532,7 @@ async function gtranslateSafe(text, sl, tl){
    시작 시 한 번만 프로브해보고 되면 계속 새 엔드포인트를 우선 쓰고, 막히면
    그 세션 내내 기존 엔드포인트로 조용히 전환한다(매 요청마다 두 번 시도하며
    느려지는 것 방지). */
-const GOOGLE_NEW_API_KEY = 'AIzaSyDLEeFI5OtFBwYBIoK_jj5m32rZK5CkCXA'; // 캘리버 소스에 평문으로 박혀있는 공개용 웹 클라이언트 키(구글 자체 웹 프런트에서도 쓰이는 것과 동일 종류, 별도 발급/등록 불필요)
+const GOOGLE_NEW_API_KEY = 'AIzaSyDLEeFI5OtFBwYBIoK_jj5m32rZK5CkCXA'; // 캘리버 소스 및 다수의 다른 오픈소스 프로젝트(Go 패키지, AutoHotkey 커뮤니티 등)에도 동일하게 공개돼 있는 구글 자체 웹 프런트용 클라이언트 키. 결제 계정 미연결, 별도 발급/등록 불필요.
 let newEndpointStatus = null; // null=아직 모름, true=사용 가능, false=이번 세션엔 불가(CORS 등)로 폴백 확정
 let newEndpointProbePromise = null;
 
@@ -1491,6 +1573,54 @@ async function gtranslateRawOld(text, sl, tl){
   return { translated, detected };
 }
 
+/* 🆕 Google AI Studio(Gemini) API로 번역. 무료 구글 번역(NMT)과 달리 LLM이라 문맥/문체
+   반영은 기대할 수 있지만, 마커(‖0‖ 등)·글로서리 플레이스홀더(◆GL0◆ 등)를 프롬프트 규칙만으로
+   강제하는 것이라 100% 보장은 아님 — 실패(빈 응답/HTTP 오류)는 상위 gtranslateRaw가 잡아서
+   기존 구글 엔드포인트로 폴백한다. 사용자가 직접 입력한 API 키(geminiApiKey)가 있을 때만 호출됨. */
+async function gtranslateRawGemini(text, sl, tl){
+  const model = (advancedOpts.geminiModel && advancedOpts.geminiModel.trim()) || 'gemini-flash-latest';
+  const srcName = (sl === 'auto') ? '원문 그대로의 언어(자동 감지)' : langName(sl);
+  const tgtName = langName(tl);
+  const prompt = [
+    `다음 텍스트를 ${srcName}에서 ${tgtName}로 번역하세요.`,
+    '규칙:',
+    '- 번역된 결과 텍스트만 출력하세요. 설명, 인용부호, 마크다운 코드블록, 원문 재출력 금지.',
+    '- "‖0‖", "‖1‖", "@@", "###", "%%%", "|||", "◆GL0◆" 같은 형태의 특수 토큰/마커가 텍스트 안에 있으면',
+    '  절대로 번역하거나 형태를 바꾸지 말고 원래 있던 위치에 정확히 그대로 남겨두세요.',
+    '- 줄바꿈 구조를 원문과 동일하게 유지하세요.',
+    '',
+    '--- 원문 시작 ---',
+    text,
+    '--- 원문 끝 ---'
+  ].join('\n');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0 }
+    })
+  });
+  if (!res.ok){
+    let msg = 'HTTP ' + res.status;
+    try {
+      const errBody = await res.json();
+      if (errBody && errBody.error && errBody.error.message) msg += ': ' + errBody.error.message;
+    } catch(e){}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  const cand = data && data.candidates && data.candidates[0];
+  const parts = cand && cand.content && cand.content.parts;
+  const translated = Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '';
+  if (!translated.trim()){
+    const reason = cand && cand.finishReason ? (' (finishReason: ' + cand.finishReason + ')') : '';
+    throw new Error('빈 응답' + reason);
+  }
+  return { translated: translated.trim(), detected: null };
+}
+
 async function ensureNewEndpointProbed(){
   if (newEndpointStatus !== null) return newEndpointStatus;
   if (!newEndpointProbePromise){
@@ -1510,6 +1640,14 @@ async function ensureNewEndpointProbed(){
 
 async function gtranslateRaw(text, sl, tl){
   text = stripNonPrintable(text);
+  if (advancedOpts.useGeminiApi && geminiApiKey){
+    try {
+      return await gtranslateRawGemini(text, sl, tl);
+    } catch (e){
+      // Gemini 호출 실패(키 오류/네트워크/빈 응답 등)는 이 요청만 기존 구글 번역으로
+      // 조용히 폴백한다 — 세션 전체를 막지 않고 번역이 계속 진행되게 함.
+    }
+  }
   if (advancedOpts.useNewGoogleEndpoint !== false){
     const ok = await ensureNewEndpointProbed();
     if (ok){
