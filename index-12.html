@@ -1,0 +1,2511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>자막·문서 번역기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg: #ffffff;
+    --bg-panel: #f7f7f8;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f0f1f3;
+    --border: #dcdde1;
+    --border-soft: #e7e8eb;
+    --text: #111214;
+    --text-dim: #4a4d54;
+    --text-faint: #86898f;
+    --accent: #c96a1f;
+    --accent-dim: #f2dcc3;
+    --accent2: #0f7a6d;
+    --danger: #d13b3b;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+    --display: 'Space Grotesk', sans-serif;
+    --header-h: 62px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family: var(--sans); height:100%; -webkit-font-smoothing: antialiased; }
+  ::selection{ background: var(--accent-dim); color:#111; }
+  #app{ display:flex; flex-direction:column; height:100vh; }
+
+  .app-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 22px; height: var(--header-h); flex-shrink:0; border-bottom:1px solid var(--border);
+    background: var(--bg-panel);
+  }
+  .brand{ display:flex; flex-direction:column; gap:2px; }
+  .brand .eyebrow{
+    font-family: var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color: var(--accent2);
+    display:flex; align-items:center; gap:6px;
+  }
+  .brand .eyebrow::before{ content:''; width:5px; height:5px; border-radius:50%; background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  .brand h1{ font-family: var(--display); font-size:18px; font-weight:700; margin:0; letter-spacing:-0.01em; }
+
+  .mobile-toggle{ display:flex; align-items:center; gap:9px; }
+  .mobile-toggle span{ font-family: var(--mono); font-size:11.5px; color: var(--text-faint); }
+  .switch{ position:relative; width:40px; height:22px; flex-shrink:0; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background: var(--bg-card); border:1px solid var(--border); border-radius:20px; cursor:pointer; transition:.15s; }
+  .slider::before{ content:''; position:absolute; width:16px; height:16px; left:2px; top:2px; background: var(--text-faint); border-radius:50%; transition:.15s; }
+  .switch input:checked + .slider{ background: rgba(201,106,31,0.15); border-color: var(--accent); }
+  .switch input:checked + .slider::before{ transform: translateX(18px); background: var(--accent); }
+
+  .tabbar{ display:none; border-bottom:1px solid var(--border); background: var(--bg-panel); flex-shrink:0; }
+  .tabbar button{
+    flex:1; padding:12px 6px; background:none; border:none; color: var(--text-faint); font-family: var(--sans);
+    font-size:12.5px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent;
+  }
+  .tabbar button.active{ color: var(--accent); border-bottom-color: var(--accent); }
+
+  .app-main{ flex:1; display:grid; grid-template-columns: 270px 1fr 340px; min-height:0; }
+  #app.mobile .app-main{ grid-template-columns: 1fr; }
+  .col{ overflow-y:auto; min-height:0; padding: 18px; }
+  .col-left{ border-right:1px solid var(--border); background: var(--bg-panel); }
+  .col-right{ border-left:1px solid var(--border); background: var(--bg-panel); }
+  .col-center{ background: var(--bg); }
+  #app.mobile .col-left{ border-right:none; }
+  #app.mobile .col-right{ border-left:none; }
+
+  .col-title{
+    font-family: var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.08em; color: var(--text-faint);
+    margin: 0 0 14px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .col-title .fname-tag{ color: var(--accent2); font-weight:600; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .dropzone{
+    border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px; text-align:center; cursor:pointer;
+    transition: border-color .15s, background .15s; background: rgba(0,0,0,0.01); margin-bottom:16px;
+  }
+  .dropzone:hover, .dropzone.drag{ border-color: var(--accent); background: rgba(201,106,31,0.05); }
+  .dropzone .icon{ font-size:22px; margin-bottom:4px; }
+  .dropzone .main{ font-size:13px; font-weight:500; }
+  .dropzone .hint{ font-size:11px; color: var(--text-faint); margin-top:3px; font-family: var(--mono); }
+  input[type=file]{ display:none; }
+
+  .file-block{
+    background: var(--bg-card); border:1.5px solid var(--border-soft); border-radius:12px; padding:14px;
+    margin-bottom:10px; cursor:pointer; transition: border-color .12s, background .12s;
+  }
+  .file-block:hover{ background: var(--bg-card-hover); }
+  .file-block.selected{ border-color: var(--accent); background: rgba(201,106,31,0.05); }
+  .fb-top{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .fb-top .ext-tag{
+    font-family: var(--mono); font-size:10px; font-weight:600; color: #fff; background: var(--accent2);
+    padding:2px 7px; border-radius:5px; text-transform:uppercase; flex-shrink:0;
+  }
+  .fb-top .fname{ flex:1; font-size:13.5px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fb-top .fb-remove{ background:none; border:none; color: var(--text-faint); cursor:pointer; font-size:15px; flex-shrink:0; padding:2px 5px; }
+  .fb-top .fb-remove:hover{ color: var(--danger); }
+  .fb-meta{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11px; color: var(--text-faint); font-family: var(--mono); }
+  .lang-chip{ background: var(--accent-dim); color: var(--accent); border-radius:20px; padding:2px 9px; font-size:10.5px; font-weight:600; }
+  .empty-note{ padding: 22px; text-align:center; color: var(--text-faint); font-size:12.5px; line-height:1.6; }
+
+  .block-row{ display:flex; gap:8px; padding:9px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px; }
+  .block-row:last-child{ border-bottom:none; }
+  .block-row .bidx{ font-family: var(--mono); color: var(--text-faint); font-size:10.5px; flex-shrink:0; width:20px; padding-top:1px; }
+  .block-row .btext{ color: var(--text-dim); line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+
+  .field{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .field label{ font-size:11px; color: var(--text-faint); font-family: var(--mono); text-transform:uppercase; letter-spacing:.04em; }
+  select, .textinput{
+    background: var(--bg-card); border:1px solid var(--border); color: var(--text); padding:8px 9px; border-radius:8px;
+    font-size:13px; font-family: var(--sans); outline:none; width:100%;
+  }
+  select:focus, .textinput:focus{ border-color: var(--accent); }
+  .fname-row{ display:flex; align-items:center; gap:6px; }
+  .fname-row .textinput{ flex:1; }
+  .fname-row .ext-suffix{ font-family: var(--mono); font-size:12px; color: var(--text-faint); flex-shrink:0; }
+
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .toggle-row label{ font-size:12.5px; color: var(--text-dim); }
+  .toggle-row .switch{ width:34px; height:19px; }
+  .toggle-row .slider::before{ width:13px; height:13px; }
+  .toggle-row .switch input:checked + .slider::before{ transform: translateX(15px); }
+
+  .section-heading{ font-size:12px; color: var(--text-faint); font-family: var(--mono); text-transform:uppercase; letter-spacing:.06em; margin: 4px 0 10px; }
+
+  .slot-card{ background: var(--bg-card); border:1px solid var(--border-soft); border-radius:10px; padding:12px; margin-bottom:10px; position:relative; }
+  .slot-card .slot-index{
+    position:absolute; top:-8px; left:10px; background: var(--bg-panel); border:1px solid var(--border-soft);
+    font-family: var(--mono); font-size:10px; color: var(--accent); padding:0 7px; border-radius:20px;
+  }
+  .slot-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .position-row{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .pos-btn{
+    flex:1; min-width:64px; text-align:center; padding:6px 4px; border-radius:7px; border:1px solid var(--border);
+    background: var(--bg-panel); color: var(--text-dim); font-size:11px; cursor:pointer; transition: all .12s;
+  }
+  .pos-btn.active{ border-color: var(--accent); color: var(--accent); background: rgba(201,106,31,0.08); }
+  .position-row.disabled .pos-btn{ opacity:.4; cursor:not-allowed; pointer-events:none; }
+  .merge-badge{ font-family: var(--mono); font-size:9.5px; color: var(--accent2); background: rgba(15,122,109,0.1); border:1px solid rgba(15,122,109,0.3); border-radius:12px; padding:1px 7px; margin-left:6px; }
+  .vocab-box{ background: var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; padding:10px; margin-bottom:10px; }
+  .vocab-box .vocab-toprow{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .vocab-box .vocab-toprow label{ font-size:12px; color: var(--text-dim); font-weight:500; }
+  .vocab-note{ font-size:10.5px; color: var(--text-faint); line-height:1.5; margin-top:6px; }
+  .slot-footer{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .slot-remove{ background:none; border:none; color: var(--text-faint); font-size:11px; cursor:pointer; font-family: var(--mono); }
+  .slot-remove:hover{ color: var(--danger); }
+  .slot-apply-all{ background:none; border:1px solid var(--border-soft); border-radius:6px; color: var(--accent); font-size:11px; cursor:pointer; padding:4px 8px; font-family: var(--mono); }
+  .slot-apply-all:hover{ background: rgba(201,106,31,0.12); }
+
+  .btn{
+    font-family: var(--sans); font-weight:600; font-size:13px; padding:9px 16px; border-radius:9px;
+    border:1px solid transparent; cursor:pointer; transition: all .12s; display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  }
+  .btn-accent{ background: var(--accent); color:#fff; }
+  .btn-accent:hover{ filter: brightness(1.08); }
+  .btn-ghost{ background: transparent; border-color: var(--border); color: var(--text-dim); }
+  .btn-ghost:hover{ border-color: var(--accent2); color: var(--accent2); }
+  .btn-block{ width:100%; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .add-lang-btn{
+    font-family: var(--mono); font-size:12px; color: var(--accent); background: rgba(201,106,31,0.06);
+    border:1px dashed var(--accent-dim); border-radius:9px; padding:9px; width:100%; text-align:center; cursor:pointer; margin-bottom:14px;
+  }
+  .add-lang-btn:hover{ background: rgba(201,106,31,0.12); }
+
+  .run-panel{ margin-top: 22px; padding-top:18px; border-top:1px solid var(--border-soft); }
+  .status-line{ font-family: var(--mono); font-size:12px; color: var(--accent2); margin: 10px 0 8px; min-height:15px; }
+  .progress-track{ height:6px; border-radius:4px; background: var(--bg-card); overflow:hidden; margin-bottom:12px; border:1px solid var(--border-soft); }
+  .progress-fill{ height:100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); width:0%; transition: width .25s; }
+  .log{
+    font-family: var(--mono); font-size:11px; color: var(--text-dim); background: #f2f3f5; border:1px solid var(--border-soft);
+    border-radius:10px; padding:10px; max-height:140px; overflow-y:auto; white-space:pre-wrap; line-height:1.6;
+  }
+  .job-list{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; max-height:180px; overflow-y:auto; }
+  .job-summary{ font-family: var(--mono); font-size:11px; color: var(--text-dim); margin-bottom:2px; }
+  .job-item{ display:flex; align-items:center; gap:8px; font-size:12px; padding:6px 9px; border-radius:8px; background: var(--bg-card); border:1px solid var(--border-soft); }
+  .job-item .job-label{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--text-dim); }
+  .job-item.job-running{ border-color: var(--accent); }
+  .job-item.job-running .job-label{ color: var(--accent); font-weight:600; }
+  .job-item.job-done .job-label{ color: var(--accent2); }
+  .job-item.job-error{ border-color: var(--danger); }
+  .job-item.job-error .job-label{ color: var(--danger); }
+  .results{ display:flex; flex-direction:column; gap:7px; margin-top:12px; }
+  .result-item{
+    display:flex; align-items:center; gap:10px; background: var(--bg-card); border:1px solid var(--border-soft);
+    border-radius:9px; padding:9px 11px; font-size:12.5px;
+  }
+  .result-item .rname{ flex:1; font-family: var(--mono); font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .result-item a{ color: var(--accent2); text-decoration:none; font-size:11.5px; font-weight:600; }
+  .result-item a:hover{ text-decoration:underline; }
+  .note{ font-size:11px; color: var(--text-faint); line-height:1.6; margin-top:14px; padding:9px 11px; background: rgba(201,106,31,0.05); border:1px solid var(--accent-dim); border-radius:8px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="app-header">
+    <div class="brand">
+      <div class="eyebrow">SRT · VTT · TXT · EPUB · FB2</div>
+      <h1>자막·문서 번역기</h1>
+    </div>
+    <div class="mobile-toggle">
+      <span>모바일 모드</span>
+      <label class="switch">
+        <input type="checkbox" id="mobileToggle" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="tabbar" id="tabbar">
+    <button data-tab="files" class="active">파일</button>
+    <button data-tab="preview">미리보기</button>
+    <button data-tab="settings">설정</button>
+  </div>
+
+  <div class="app-main">
+    <div class="col col-left" id="colLeft">
+      <div class="col-title"><span>내용 미리보기</span><span class="fname-tag" id="previewFname"></span></div>
+      <div id="blockList"><div class="empty-note">중앙에서 파일을 선택하면<br/>추출된 블록이 여기에 표시됩니다.</div></div>
+    </div>
+
+    <div class="col col-center" id="colCenter">
+      <div class="col-title">업로드</div>
+      <div class="dropzone" id="dropzone">
+        <div class="icon">📂</div>
+        <div class="main">클릭하거나 파일을 끌어다 놓으세요</div>
+        <div class="hint">SRT · VTT · TXT · EPUB · FB2 (다중 선택 가능)</div>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".srt,.vtt,.txt,.epub,.fb2" />
+
+      <div class="col-title" style="margin-top:6px;">업로드된 파일</div>
+      <div id="fileBlockList"><div class="empty-note">아직 업로드된 파일이 없습니다.</div></div>
+
+      <details class="advanced-panel" style="margin-top:10px; border:1px solid var(--border-soft); border-radius:10px; padding:8px 12px; background:var(--bg-card);">
+        <summary style="cursor:pointer; font-size:13px; font-weight:600;">⚙️ 고급 실험 옵션 (선택)</summary>
+        <div style="margin-top:8px; display:flex; align-items:center; gap:6px; font-size:12.5px;">
+          <label class="switch"><input type="checkbox" id="advEnabledChk"/><span class="slider"></span></label>
+          <span>아래 값으로 자막/문서 기본 프로파일을 덮어쓰기</span>
+        </div>
+        <div id="advFieldsGrid" style="margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; opacity:0.5;">
+          <label>청크 목표 블록 수<input type="number" id="advTargetSize" min="1" max="50" placeholder="자동"/></label>
+          <label>청크 최대 블록 수<input type="number" id="advMaxSize" min="1" max="80" placeholder="자동"/></label>
+          <label>청크 글자수 상한<input type="number" id="advMaxChars" min="200" max="6000" step="100" placeholder="자동"/></label>
+          <label>동시 처리 개수<input type="number" id="advConcurrency" min="1" max="10" placeholder="자동"/></label>
+          <label>문맥 윈도우 (앞)<input type="number" id="advContextBefore" min="0" max="10" placeholder="자동"/></label>
+          <label>문맥 윈도우 (뒤)<input type="number" id="advContextAfter" min="0" max="10" placeholder="자동"/></label>
+        </div>
+        <div class="vocab-note" style="margin-top:6px;">🆕 문서(.txt/.epub/.fb2)는 이제 캘리버 번역 플러그인 기본값과 동일하게 문단 하나씩 개별 번역합니다(마커/문맥윈도우 없음) — 그래서 위 6개 항목 중 <b>"동시 처리 개수"만 문서에 적용</b>되고, 나머지(청크 목표/최대 블록 수, 청크 글자수 상한, 문맥 윈도우 앞/뒤)는 자막(.srt/.vtt)에만 적용됩니다. 비활성 상태면 입력값은 무시되고 자동 프로파일을 씁니다. 동시 처리 개수를 너무 높이면 구글이 일시 차단(429/403)할 수 있어요.</div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border-soft); display:flex; align-items:center; gap:6px; font-size:12.5px;">
+          <label class="switch"><input type="checkbox" id="narrativeStyleChk"/><span class="slider"></span></label>
+          <span>🆕 문서: '합니다체' → '하다체' 변환 시도 (실험적)</span>
+        </div>
+        <div class="vocab-note">구글 번역이 소설도 대부분 정중체(합니다체)로 번역하는 경향이 있어, 과거형 어미(~았/었습니다→~았/었다)와 계사(입니다→이다) 위주로 서술체에 가깝게 후처리합니다. 현재형 동사(예: 갑니다→간다)는 한국어 활용이 복잡해 다루지 못해 그대로 남을 수 있습니다 — 완벽하지 않은 부분 변환입니다. 문서(.txt/.epub/.fb2)에만 적용되며 자막에는 적용되지 않습니다.</div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border-soft); display:flex; align-items:center; gap:6px; font-size:12.5px;">
+          <label class="switch"><input type="checkbox" id="cacheEnabledChk" checked/><span class="slider"></span></label>
+          <span>🆕 번역 캐시 사용 (브라우저에 저장, 재작업 시 같은 문장 재요청 안 함)</span>
+          <button type="button" id="cacheClearBtn" style="margin-left:auto; font-size:11.5px; padding:3px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">🗑 캐시 비우기</button>
+        </div>
+        <div class="vocab-note" id="cacheStatusNote">언어쌍+용어고정 조합별로 캐시가 저장됩니다. 같은 파일을 다시 돌리거나 중간에 실패해도, 이미 번역된 문장은 구글에 다시 묻지 않고 캐시에서 바로 채웁니다.</div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border-soft); display:flex; align-items:center; gap:6px; font-size:12.5px;">
+          <label class="switch"><input type="checkbox" id="newEndpointChk" checked/><span class="slider"></span></label>
+          <span>🆕 Google 새 엔드포인트 우선 시도 (캘리버 기본 추천값)</span>
+        </div>
+        <div class="vocab-note" id="newEndpointStatusNote">캘리버 번역 플러그인이 "casual user에게 추천"으로 명시한 translate-pa.googleapis.com 엔드포인트를 먼저 써봅니다. 번역 시작 시 1회 접속 테스트 후, 되면 계속 이걸 쓰고 브라우저 CORS 등으로 막히면 자동으로 기존 방식(translate_a/single)으로 전환됩니다 — 상태는 여기 표시됩니다.</div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border-soft); display:flex; align-items:center; gap:6px; font-size:12.5px;">
+          <label class="switch"><input type="checkbox" id="geminiEnabledChk"/><span class="slider"></span></label>
+          <span>🆕 Google AI Studio(Gemini) API로 번역 (내 API 키 사용)</span>
+        </div>
+        <div id="geminiFieldsBox" style="margin-top:8px; display:none; flex-direction:column; gap:8px; font-size:12px;">
+          <label style="display:flex; flex-direction:column; gap:3px;">
+            API 키 (한 줄에 하나씩, 여러 개 등록 가능 — 브라우저 메모리(localStorage)에만 저장, 코드/서버로 전송 안 됨)
+            <div style="display:flex; gap:6px; align-items:flex-start;">
+              <textarea id="geminiApiKeyInput" rows="3" placeholder="AIzaSy... (키 1)&#10;AIzaSy... (키 2, 선택)" autocomplete="off" spellcheck="false" style="flex:1; min-width:0; resize:vertical; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:12px; font-family:monospace; line-height:1.5; transition:filter .15s;"></textarea>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <button type="button" id="geminiApiKeyToggleBtn" title="키 표시/숨기기" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">👁</button>
+                <button type="button" id="geminiApiKeyClearBtn" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">지우기</button>
+              </div>
+            </div>
+            <span id="geminiKeyCountNote" style="font-size:11px; color:var(--text-dim);"></span>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:3px;">
+            모델명 (선택, 비워두면 기본값 사용)
+            <input type="text" id="geminiModelInput" placeholder="기본: gemini-flash-latest" style="padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:12px;"/>
+          </label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" id="geminiTestBtn" style="font-size:11.5px; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">🔎 키 전체 연결 테스트</button>
+            <span id="geminiTestResult" style="font-size:11.5px; color:var(--text-dim);"></span>
+          </div>
+          <label style="display:flex; flex-direction:column; gap:3px; margin-top:4px; padding-top:8px; border-top:1px solid var(--border-soft);">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>자막(.srt/.vtt)용 번역 프롬프트 (직접 수정 가능)</span>
+              <button type="button" id="geminiSubtitlePromptResetBtn" style="font-size:10.5px; padding:2px 7px; border-radius:5px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">기본값으로</button>
+            </div>
+            <textarea id="geminiSubtitlePromptInput" rows="8" spellcheck="false" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:11.5px; font-family:monospace; line-height:1.5; resize:vertical;"></textarea>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:3px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>문서(.txt/.epub/.fb2)용 번역 프롬프트 (직접 수정 가능)</span>
+              <button type="button" id="geminiDocumentPromptResetBtn" style="font-size:10.5px; padding:2px 7px; border-radius:5px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); cursor:pointer;">기본값으로</button>
+            </div>
+            <textarea id="geminiDocumentPromptInput" rows="8" spellcheck="false" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:11.5px; font-family:monospace; line-height:1.5; resize:vertical;"></textarea>
+          </label>
+          <div class="vocab-note">프롬프트 안의 <code>{{SRC}}</code>·<code>{{TGT}}</code>는 각각 출발/도착 언어명, <code>{{TEXT}}</code>는 실제 원문으로 자동 치환됩니다. <code>{{TEXT}}</code>를 지워도 번역이 깨지지 않게 뒤에 원문을 안전하게 덧붙이지만, 위치를 제어하려면 남겨두는 걸 권장합니다. 마커 보존 규칙 줄은 되도록 남겨두세요 — 지우면 자막 타이밍/문단 매칭이 깨질 수 있습니다. 수정 즉시 저장되며, 다음 번역부터 바로 적용됩니다.</div>
+        </div>
+        <div class="vocab-note" id="geminiStatusNote">켜면 모든 번역 요청이 무료 구글 엔드포인트 대신 입력한 API 키로 Gemini(Google AI Studio)에 직접 전송됩니다(우선순위 최상단 — 위의 "새 엔드포인트" 옵션보다 먼저 시도됨). 키를 여러 줄로 여러 개 등록하면 요청마다 돌아가며 사용하고, 한 키가 쿼터 초과(429) 등으로 실패하면 같은 요청 안에서 자동으로 다음 키를 시도합니다. 등록된 모든 키가 실패해야 그 호출만 기존 구글 번역으로 폴백합니다. 키는 <code>localStorage</code>에만 저장되며 이 코드 자체에는 들어가지 않습니다. 자막과 문서는 서로 다른 프롬프트(아래)를 쓰며, 러시아어 원문에 대한 말투·생략 주어·인명 표기 지침이 기본으로 들어가 있습니다 — 다른 언어쌍에도 그대로 써도 무방합니다.</div>
+      </details>
+
+      <div class="run-panel">
+        <button class="btn btn-accent btn-block" id="startBtn">전체 번역 시작</button>
+        <div class="status-line" id="statusLine"></div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="job-list" id="jobList"></div>
+        <div class="log" id="log">대기 중...</div>
+        <div class="results" id="results"></div>
+        <div class="note">구글 번역 비공식 무료 엔드포인트(translate.googleapis.com)를 브라우저에서 직접 호출합니다. 요청량이 많으면 일시적으로 지연·차단될 수 있습니다.</div>
+      </div>
+    </div>
+
+    <div class="col col-right" id="colRight">
+      <div class="col-title">선택 파일 설정</div>
+      <div id="settingsPanel"><div class="empty-note">중앙에서 파일을 선택하면<br/>파일명·언어·옵션을 설정할 수 있습니다.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= Utilities ================= */
+const uid = () => Math.random().toString(36).slice(2,9);
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function detectExt(name){
+  const m = name.toLowerCase().match(/\.([a-z0-9]+)$/);
+  return m ? m[1] : '';
+}
+
+const LANGS = [
+  ['ko','한국어'],['en','영어'],['ja','일본어'],['zh-CN','중국어(간체)'],['zh-TW','중국어(번체)'],
+  ['es','스페인어'],['fr','프랑스어'],['de','독일어'],['it','이탈리아어'],['pt','포르투갈어'],
+  ['ru','러시아어'],['ar','아랍어'],['hi','힌디어'],['th','태국어'],['vi','베트남어'],
+  ['id','인도네시아어'],['tr','터키어'],['pl','폴란드어'],['nl','네덜란드어'],['sv','스웨덴어'],
+  ['cs','체코어'],['el','그리스어'],['he','히브리어'],['fa','페르시아어'],['uk','우크라이나어'],
+  ['ro','루마니아어'],['hu','헝가리어'],['fi','핀란드어'],['da','덴마크어'],['no','노르웨이어'],
+  ['ms','말레이어'],['tl','필리핀어'],['bn','벵골어'],['ur','우르두어']
+];
+const SOURCE_LANGS = [['auto','자동 감지'], ...LANGS];
+function langName(code){
+  if (code==='auto') return '자동 감지';
+  const f = LANGS.find(l=>l[0]===code);
+  return f ? f[1] : code;
+}
+
+/* ================= State ================= */
+let uploadedFiles = [];
+
+/* ---- 고급 실험 옵션: 청크/문맥/동시성 파라미터를 사용자가 직접 조정할 수 있게.
+   enabled가 false면 전부 무시하고 포맷별 자동 프로파일(CHUNK_PROFILES)을 사용. ---- */
+const advancedOpts = {
+  enabled: false,
+  targetSize: null, maxSize: null, maxChars: null,
+  concurrency: null, contextBefore: null, contextAfter: null,
+  narrativeStyle: false, // 🆕 이번 대화: 문서 번역 결과에 합니다체→하다체 실험적 후처리 적용 여부
+  cacheEnabled: true, // 🆕 번역 캐시(IndexedDB) 영속화 사용 여부, 기본 켜짐
+  useNewGoogleEndpoint: true, // 🆕 캘리버가 기본 추천하는 translate-pa 새 엔드포인트 우선 시도 여부, 기본 켜짐
+  useGeminiApi: false, // 🆕 Google AI Studio(Gemini) API로 번역할지 여부, 기본 꺼짐(체크박스로 사용자가 켬)
+  geminiModel: '' // 🆕 Gemini 모델명 오버라이드(비우면 gtranslateRawGemini 내부 기본값 사용)
+};
+/* 🆕 Gemini API 키는 민감정보라 advancedOpts(메모리 전용 설정 객체)와 분리해서 관리.
+   서버가 없는 단일 HTML 구조라, 코드/깃에는 절대 넣지 않고 사용자가 직접 입력 →
+   이 브라우저의 localStorage에만 저장(인수인계서 5장의 일반론과 동일한 방식).
+   여러 키를 줄바꿈으로 등록할 수 있게, 원본 텍스트(geminiApiKeysRaw)를 그대로 저장하고
+   실제 사용 시점(getGeminiKeys)에 줄 단위로 잘라서 배열로 만든다. */
+const GEMINI_KEY_STORAGE = 'translatorGeminiApiKey';
+const GEMINI_MODEL_STORAGE = 'translatorGeminiModel';
+let geminiApiKeysRaw = '';
+try { geminiApiKeysRaw = localStorage.getItem(GEMINI_KEY_STORAGE) || ''; } catch(e){ /* localStorage 접근 불가 환경(예: 일부 프라이빗 모드) — 조용히 빈 값 유지 */ }
+function getGeminiKeys(){
+  return geminiApiKeysRaw.split('\n').map(s => s.trim()).filter(Boolean);
+}
+let geminiKeyRRIndex = 0; // 🆕 여러 키를 돌아가며 쓰기 위한 라운드로빈 포인터(세션 메모리 전용, 저장 안 함)
+try {
+  const savedModel = localStorage.getItem(GEMINI_MODEL_STORAGE) || '';
+  if (savedModel) advancedOpts.geminiModel = savedModel;
+} catch(e){}
+
+/* 🆕 Gemini 번역 프롬프트: 자막(.srt/.vtt)과 문서(.txt/.epub/.fb2)는 요구되는 문체·제약이
+   달라서 템플릿을 따로 둔다. {{SRC}}/{{TGT}}는 언어명, {{TEXT}}는 원문으로 치환된다.
+   두 템플릿 다 마커/글로서리 토큰 보존 규칙은 공통으로 넣어야 안전하다(마커가 깨지면
+   자막 타이밍/문단 매칭이 어긋남) — 그래서 기본값에 이미 포함해뒀고, 사용자가 수정할 때도
+   이 규칙 문구는 되도록 남겨두길 권장(안내문에도 명시). 러시아어 관련 지침은 요청으로 추가한 것.
+   러시아어가 아닌 다른 언어쌍에도 그대로 써도 무방(해당 규칙은 원문이 러시아어일 때만 적용되는
+   조건문 형태라, 다른 언어면 모델이 알아서 무시함). */
+const GEMINI_MARKER_RULE =
+  '- "‖0‖", "‖1‖", "@@", "###", "%%%", "|||", "◆GL0◆" 같은 형태의 특수 토큰/마커가 텍스트 안에 있으면 절대로 번역하거나 형태를 바꾸지 말고 원래 있던 위치에 정확히 그대로 남겨두세요.';
+const DEFAULT_GEMINI_SUBTITLE_PROMPT = [
+  '당신은 전문 영상 자막 번역가입니다. 아래 텍스트를 {{SRC}}에서 {{TGT}}로 번역하세요.',
+  '',
+  '규칙:',
+  '- 번역된 자막 텍스트만 출력하세요. 설명, 인용부호, 마크다운, 원문 재출력 금지.',
+  GEMINI_MARKER_RULE,
+  '- 줄바꿈 구조를 원문과 동일하게 유지하세요.',
+  '- 실제 구어체 대사처럼 자연스럽고 간결하게 옮기세요. 시청자가 짧은 시간에 읽어야 하므로 불필요하게 길어지지 않게 하세요.',
+  '- 원문이 러시아어라면: ты(반말)/вы(존댓말) 구분과 화자 간 관계·상황에 맞는 말투(반말/존댓말, 명령형 어미 등)를 자연스러운 한국어로 살리고, 감탄사·욕설·비속어의 뉘앙스 강도를 과장하거나 순화하지 말고 비슷한 수위로 옮기세요. 러시아어 특유의 생략된 주어는 문맥상 자연스럽게 보충하세요. 인명/지명은 한국에서 통용되는 러시아어 외래어 표기법을 따르세요.',
+  '',
+  '--- 원문 시작 ---',
+  '{{TEXT}}',
+  '--- 원문 끝 ---'
+].join('\n');
+const DEFAULT_GEMINI_DOCUMENT_PROMPT = [
+  '당신은 전문 문헌 번역가입니다. 아래 텍스트를 {{SRC}}에서 {{TGT}}로 번역하세요.',
+  '',
+  '규칙:',
+  '- 번역된 텍스트만 출력하세요. 설명, 인용부호, 마크다운, 원문 재출력 금지.',
+  GEMINI_MARKER_RULE,
+  '- 문단/줄바꿈 구조를 원문과 동일하게 유지하고, 문체(격식체/구어체/문어체)를 원문 전체에 걸쳐 일관되게 유지하세요.',
+  '- 원문이 러시아어라면: 격변화 때문에 생략되기 쉬운 주어/목적어를 문맥에 맞게 자연스러운 한국어로 보충하고, 관용구·속담은 단어 그대로 직역하기보다 의미가 통하는 한국어 표현으로 옮기세요. 인명/지명은 한국에서 통용되는 러시아어 외래어 표기법을 따르고, 앞서 등장한 표기와 이 문서 안에서 일관성을 유지하세요.',
+  '',
+  '--- 원문 시작 ---',
+  '{{TEXT}}',
+  '--- 원문 끝 ---'
+].join('\n');
+const GEMINI_SUBTITLE_PROMPT_STORAGE = 'translatorGeminiSubtitlePrompt';
+const GEMINI_DOCUMENT_PROMPT_STORAGE = 'translatorGeminiDocumentPrompt';
+let geminiSubtitlePromptTemplate = DEFAULT_GEMINI_SUBTITLE_PROMPT;
+let geminiDocumentPromptTemplate = DEFAULT_GEMINI_DOCUMENT_PROMPT;
+try {
+  const savedSub = localStorage.getItem(GEMINI_SUBTITLE_PROMPT_STORAGE);
+  if (savedSub) geminiSubtitlePromptTemplate = savedSub;
+  const savedDoc = localStorage.getItem(GEMINI_DOCUMENT_PROMPT_STORAGE);
+  if (savedDoc) geminiDocumentPromptTemplate = savedDoc;
+} catch(e){}
+/* kind: 'subtitle'|'document' (그 외/생략이면 문서용 템플릿). {{SRC}}/{{TGT}}는 언어명으로,
+   {{TEXT}}는 실제 원문으로 치환한다. 사용자가 템플릿을 편집하다 실수로 {{TEXT}}를 지워도
+   번역 자체가 깨지지 않도록, 그럴 땐 프롬프트 뒤에 원문 구획을 안전하게 덧붙인다. */
+function buildGeminiPrompt(kind, sl, tl, text){
+  const template = (kind === 'subtitle' ? geminiSubtitlePromptTemplate : geminiDocumentPromptTemplate) || DEFAULT_GEMINI_DOCUMENT_PROMPT;
+  const srcName = (sl === 'auto') ? '원문 그대로의 언어(자동 감지)' : langName(sl);
+  const tgtName = langName(tl);
+  let prompt = template.split('{{SRC}}').join(srcName).split('{{TGT}}').join(tgtName);
+  if (prompt.indexOf('{{TEXT}}') !== -1){
+    prompt = prompt.split('{{TEXT}}').join(text);
+  } else {
+    prompt += '\n\n--- 원문 시작 ---\n' + text + '\n--- 원문 끝 ---';
+  }
+  return prompt;
+}
+
+(function initAdvancedPanel(){
+  const enabledChk = document.getElementById('advEnabledChk');
+  const grid = document.getElementById('advFieldsGrid');
+  const narrativeChk = document.getElementById('narrativeStyleChk');
+  const cacheChk = document.getElementById('cacheEnabledChk');
+  const cacheClearBtn = document.getElementById('cacheClearBtn');
+  const newEndpointChk = document.getElementById('newEndpointChk');
+  const geminiEnabledChk = document.getElementById('geminiEnabledChk');
+  const geminiFieldsBox = document.getElementById('geminiFieldsBox');
+  const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+  const geminiApiKeyToggleBtn = document.getElementById('geminiApiKeyToggleBtn');
+  const geminiApiKeyClearBtn = document.getElementById('geminiApiKeyClearBtn');
+  const geminiKeyCountNote = document.getElementById('geminiKeyCountNote');
+  const geminiModelInput = document.getElementById('geminiModelInput');
+  const geminiTestBtn = document.getElementById('geminiTestBtn');
+  const geminiTestResult = document.getElementById('geminiTestResult');
+  const geminiSubtitlePromptInput = document.getElementById('geminiSubtitlePromptInput');
+  const geminiDocumentPromptInput = document.getElementById('geminiDocumentPromptInput');
+  const geminiSubtitlePromptResetBtn = document.getElementById('geminiSubtitlePromptResetBtn');
+  const geminiDocumentPromptResetBtn = document.getElementById('geminiDocumentPromptResetBtn');
+  geminiSubtitlePromptInput.value = geminiSubtitlePromptTemplate;
+  geminiDocumentPromptInput.value = geminiDocumentPromptTemplate;
+  geminiSubtitlePromptInput.addEventListener('input', e=>{
+    geminiSubtitlePromptTemplate = e.target.value;
+    try { localStorage.setItem(GEMINI_SUBTITLE_PROMPT_STORAGE, geminiSubtitlePromptTemplate); } catch(err){}
+  });
+  geminiDocumentPromptInput.addEventListener('input', e=>{
+    geminiDocumentPromptTemplate = e.target.value;
+    try { localStorage.setItem(GEMINI_DOCUMENT_PROMPT_STORAGE, geminiDocumentPromptTemplate); } catch(err){}
+  });
+  geminiSubtitlePromptResetBtn.addEventListener('click', ()=>{
+    geminiSubtitlePromptTemplate = DEFAULT_GEMINI_SUBTITLE_PROMPT;
+    geminiSubtitlePromptInput.value = DEFAULT_GEMINI_SUBTITLE_PROMPT;
+    try { localStorage.removeItem(GEMINI_SUBTITLE_PROMPT_STORAGE); } catch(err){}
+  });
+  geminiDocumentPromptResetBtn.addEventListener('click', ()=>{
+    geminiDocumentPromptTemplate = DEFAULT_GEMINI_DOCUMENT_PROMPT;
+    geminiDocumentPromptInput.value = DEFAULT_GEMINI_DOCUMENT_PROMPT;
+    try { localStorage.removeItem(GEMINI_DOCUMENT_PROMPT_STORAGE); } catch(err){}
+  });
+  let geminiKeysHidden = true; // 🆕 기본은 흐림 처리(어깨너머 노출 방지), 포커스하면 자동으로 선명해짐
+  function refreshGeminiKeyCountNote(){
+    const n = getGeminiKeys().length;
+    geminiKeyCountNote.textContent = n ? `등록된 키 ${n}개 (요청마다 돌아가며 사용, 실패 시 다음 키로 자동 전환)` : '등록된 키 없음';
+  }
+  function applyGeminiBlur(){
+    geminiApiKeyInput.style.filter = geminiKeysHidden ? 'blur(5px)' : 'none';
+  }
+  // 저장된 값(있으면) 입력창에 반영
+  geminiApiKeyInput.value = geminiApiKeysRaw;
+  geminiModelInput.value = advancedOpts.geminiModel || '';
+  applyGeminiBlur();
+  refreshGeminiKeyCountNote();
+  geminiEnabledChk.addEventListener('change', e=>{
+    advancedOpts.useGeminiApi = e.target.checked;
+    geminiFieldsBox.style.display = e.target.checked ? 'flex' : 'none';
+  });
+  geminiApiKeyInput.addEventListener('input', e=>{
+    geminiApiKeysRaw = e.target.value;
+    try { localStorage.setItem(GEMINI_KEY_STORAGE, geminiApiKeysRaw); } catch(err){}
+    geminiKeyRRIndex = 0; // 키 목록이 바뀌면 로테이션 포인터 리셋
+    refreshGeminiKeyCountNote();
+    geminiTestResult.textContent = '';
+  });
+  geminiApiKeyInput.addEventListener('focus', ()=>{ geminiApiKeyInput.style.filter = 'none'; });
+  geminiApiKeyInput.addEventListener('blur', applyGeminiBlur);
+  geminiApiKeyToggleBtn.addEventListener('click', ()=>{
+    geminiKeysHidden = !geminiKeysHidden;
+    geminiApiKeyToggleBtn.textContent = geminiKeysHidden ? '👁' : '🙈';
+    applyGeminiBlur();
+  });
+  geminiApiKeyClearBtn.addEventListener('click', ()=>{
+    geminiApiKeysRaw = '';
+    geminiApiKeyInput.value = '';
+    try { localStorage.removeItem(GEMINI_KEY_STORAGE); } catch(err){}
+    geminiKeyRRIndex = 0;
+    refreshGeminiKeyCountNote();
+    geminiTestResult.textContent = '';
+  });
+  geminiModelInput.addEventListener('input', e=>{
+    advancedOpts.geminiModel = e.target.value.trim();
+    try { localStorage.setItem(GEMINI_MODEL_STORAGE, advancedOpts.geminiModel); } catch(err){}
+  });
+  geminiTestBtn.addEventListener('click', async ()=>{
+    const keys = getGeminiKeys();
+    if (!keys.length){
+      geminiTestResult.textContent = '⚠️ API 키를 먼저 입력하세요.';
+      return;
+    }
+    let ok = 0, fail = 0;
+    const failMsgs = [];
+    for (let i = 0; i < keys.length; i++){
+      geminiTestResult.textContent = `테스트 중... (${i + 1}/${keys.length})`;
+      try {
+        await gtranslateRawGeminiWithKey('안녕하세요, 만나서 반갑습니다.', 'ko', 'en', keys[i]);
+        ok++;
+      } catch (err){
+        fail++;
+        failMsgs.push(`#${i + 1}: ${err.message}`);
+      }
+    }
+    let msg = `✅ ${ok}개 정상`;
+    if (fail) msg += ` / ❌ ${fail}개 실패 (${failMsgs.slice(0, 2).join('; ')}${failMsgs.length > 2 ? ' 외' : ''})`;
+    geminiTestResult.textContent = msg;
+  });
+  const fieldMap = {
+    advTargetSize:'targetSize', advMaxSize:'maxSize', advMaxChars:'maxChars',
+    advConcurrency:'concurrency', advContextBefore:'contextBefore', advContextAfter:'contextAfter'
+  };
+  enabledChk.addEventListener('change', e=>{
+    advancedOpts.enabled = e.target.checked;
+    grid.style.opacity = advancedOpts.enabled ? '1' : '0.5';
+  });
+  narrativeChk.addEventListener('change', e=>{ advancedOpts.narrativeStyle = e.target.checked; });
+  cacheChk.addEventListener('change', e=>{ advancedOpts.cacheEnabled = e.target.checked; });
+  cacheClearBtn.addEventListener('click', async ()=>{
+    await cacheClear();
+    const note = document.getElementById('cacheStatusNote');
+    const prev = note.textContent;
+    note.textContent = '✅ 캐시를 비웠습니다.';
+    setTimeout(()=>{ note.textContent = prev; }, 2000);
+  });
+  newEndpointChk.addEventListener('change', e=>{
+    advancedOpts.useNewGoogleEndpoint = e.target.checked;
+    if (!e.target.checked){
+      document.getElementById('newEndpointStatusNote').textContent = '꺼짐: 기존 방식(translate_a/single)만 사용합니다.';
+    } else if (newEndpointStatus === null){
+      document.getElementById('newEndpointStatusNote').textContent = '켜짐: 번역 시작 시 접속 테스트를 다시 시도합니다.';
+    }
+  });
+  Object.entries(fieldMap).forEach(([elId, key])=>{
+    document.getElementById(elId).addEventListener('input', e=>{
+      const v = e.target.value.trim();
+      advancedOpts[key] = v==='' ? null : Math.max(0, parseInt(v,10)||0);
+    });
+  });
+})();
+let selectedFileId = null;
+let manualMobile = false;
+let activeTab = 'files';
+
+function newSlot(seed){
+  return {
+    id: uid(),
+    source: seed?seed.source:'auto',
+    target: seed?seed.target:'ko',
+    position: seed?seed.position:'below',
+    glossary: seed?(seed.glossary||''):''
+  };
+}
+
+/* ================= Layout / mobile toggle ================= */
+function computeIsMobile(){ return manualMobile || window.innerWidth <= 860; }
+function updateLayout(){
+  const mobile = computeIsMobile();
+  document.getElementById('app').classList.toggle('mobile', mobile);
+  document.getElementById('tabbar').style.display = mobile ? 'flex' : 'none';
+  const cols = { files: document.getElementById('colCenter'), preview: document.getElementById('colLeft'), settings: document.getElementById('colRight') };
+  if (mobile){
+    Object.entries(cols).forEach(([name, el])=>{ el.style.display = (name===activeTab) ? '' : 'none'; });
+  } else {
+    Object.values(cols).forEach(el=> el.style.display = '');
+  }
+}
+document.getElementById('mobileToggle').addEventListener('change', e=>{ manualMobile = e.target.checked; updateLayout(); });
+window.addEventListener('resize', updateLayout);
+document.querySelectorAll('#tabbar button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    activeTab = btn.dataset.tab;
+    document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('active', b===btn));
+    updateLayout();
+  });
+});
+function goToTab(tab){
+  activeTab = tab;
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  updateLayout();
+}
+updateLayout();
+
+/* ================= File handling ================= */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.addEventListener('click', ()=> fileInput.click());
+dropzone.addEventListener('dragover', e=>{ e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{ e.preventDefault(); dropzone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', e=> handleFiles(e.target.files));
+
+async function handleFiles(fileList){
+  for (const f of Array.from(fileList)){
+    const ext = detectExt(f.name);
+    if (!['srt','vtt','txt','epub','fb2'].includes(ext)){
+      appendLog(`⚠️ 지원하지 않는 형식: ${f.name}`);
+      continue;
+    }
+    const baseName = f.name.replace(/\.[^.]+$/, '');
+    const item = {
+      id: uid(), name: f.name, ext, raw: null, blocks: null, parseError: null,
+      outputBaseName: baseName, addLangSuffix: true, fb2OutputFormat: 'epub', mergeLangs: false, slots: [newSlot()]
+    };
+    try{
+      item.raw = (ext === 'epub') ? await f.arrayBuffer() : await f.text();
+    } catch(e){ item.parseError = '파일을 읽을 수 없습니다'; }
+    uploadedFiles.push(item);
+    if (!selectedFileId) selectedFileId = item.id;
+    renderFileBlockList();
+    renderPreview();
+    renderSettings();
+    parseFile(item).then(parsed=>{
+      item.blocks = parsed.blocks;
+      renderFileBlockList();
+      if (selectedFileId===item.id) renderPreview();
+    }).catch(e=>{
+      item.parseError = e.message || '파싱 실패';
+      renderFileBlockList();
+      if (selectedFileId===item.id) renderPreview();
+    });
+  }
+}
+
+function removeFile(id){
+  uploadedFiles = uploadedFiles.filter(f=>f.id!==id);
+  if (selectedFileId===id) selectedFileId = uploadedFiles.length ? uploadedFiles[0].id : null;
+  renderFileBlockList(); renderPreview(); renderSettings();
+}
+function selectFile(id){
+  selectedFileId = id;
+  renderFileBlockList(); renderPreview(); renderSettings();
+  if (computeIsMobile()) goToTab('settings');
+}
+
+function renderFileBlockList(){
+  const el = document.getElementById('fileBlockList');
+  if (!uploadedFiles.length){ el.innerHTML = '<div class="empty-note">아직 업로드된 파일이 없습니다.</div>'; return; }
+  el.innerHTML = '';
+  uploadedFiles.forEach(f=>{
+    const div = document.createElement('div');
+    div.className = 'file-block' + (f.id===selectedFileId ? ' selected' : '');
+    const countText = f.parseError ? `<span style="color:var(--danger)">${escapeHtml(f.parseError)}</span>` : (f.blocks ? `${f.blocks.length}개 블록` : '분석 중...');
+    const chips = f.slots.map(s=> `<span class="lang-chip">${langName(s.target)}</span>`).join('');
+    div.innerHTML = `
+      <div class="fb-top">
+        <span class="ext-tag">${f.ext}</span>
+        <span class="fname">${escapeHtml(f.name)}</span>
+        <button class="fb-remove" title="삭제">✕</button>
+      </div>
+      <div class="fb-meta">${countText}${chips ? ' · ' : ''}${chips}</div>
+    `;
+    div.querySelector('.fb-remove').addEventListener('click', (e)=>{ e.stopPropagation(); removeFile(f.id); });
+    div.addEventListener('click', ()=> selectFile(f.id));
+    el.appendChild(div);
+  });
+}
+
+function renderPreview(){
+  const fnameTag = document.getElementById('previewFname');
+  const container = document.getElementById('blockList');
+  const f = uploadedFiles.find(x=>x.id===selectedFileId);
+  if (!f){ fnameTag.textContent=''; container.innerHTML = '<div class="empty-note">중앙에서 파일을 선택하면<br/>추출된 블록이 여기에 표시됩니다.</div>'; return; }
+  fnameTag.textContent = f.name;
+  if (f.parseError){ container.innerHTML = `<div class="empty-note">파싱 오류: ${escapeHtml(f.parseError)}</div>`; return; }
+  if (!f.blocks){ container.innerHTML = '<div class="empty-note">분석 중...</div>'; return; }
+  if (!f.blocks.length){ container.innerHTML = '<div class="empty-note">추출된 텍스트 블록이 없습니다.</div>'; return; }
+  container.innerHTML = '';
+  f.blocks.slice(0,60).forEach((b,i)=>{
+    const row = document.createElement('div');
+    row.className = 'block-row';
+    row.innerHTML = `<div class="bidx">${i+1}</div><div class="btext">${escapeHtml(b.text)}</div>`;
+    container.appendChild(row);
+  });
+  if (f.blocks.length>60){
+    const more = document.createElement('div');
+    more.className = 'empty-note';
+    more.textContent = `외 ${f.blocks.length-60}개 블록...`;
+    container.appendChild(more);
+  }
+}
+
+/* ================= Right sidebar: settings ================= */
+function renderSettings(){
+  const panel = document.getElementById('settingsPanel');
+  const f = uploadedFiles.find(x=>x.id===selectedFileId);
+  if (!f){ panel.innerHTML = '<div class="empty-note">중앙에서 파일을 선택하면<br/>파일명·언어·옵션을 설정할 수 있습니다.</div>'; return; }
+
+  panel.innerHTML = '';
+
+  const fnameField = document.createElement('div');
+  fnameField.className = 'field';
+  fnameField.innerHTML = `
+    <label>출력 파일명</label>
+    <div class="fname-row">
+      <input type="text" class="textinput" id="outNameInput" value="${escapeHtml(f.outputBaseName)}" />
+      <span class="ext-suffix" id="outExtSuffix">.${f.ext==='fb2'?(f.fb2OutputFormat==='fb2'?'fb2':'epub'):f.ext}</span>
+    </div>
+  `;
+  panel.appendChild(fnameField);
+  fnameField.querySelector('#outNameInput').addEventListener('input', e=>{ f.outputBaseName = e.target.value || f.name.replace(/\.[^.]+$/,''); });
+
+  // 🆕 fb2 파일일 때만: EPUB로 변환할지, 원본 fb2 구조를 그대로 유지(번역만)할지 선택
+  if (f.ext === 'fb2'){
+    const fmtField = document.createElement('div');
+    fmtField.className = 'field';
+    fmtField.innerHTML = `
+      <label>내보낼 형식</label>
+      <select class="textinput" id="fb2FormatSelect">
+        <option value="epub" ${f.fb2OutputFormat!=='fb2'?'selected':''}>EPUB로 변환 (챕터 분할·이미지 포함)</option>
+        <option value="fb2" ${f.fb2OutputFormat==='fb2'?'selected':''}>FB2로 유지 (번역만, 변환은 나중에 직접)</option>
+      </select>
+      <div class="vocab-note">FB2로 유지하면 원본 구조(이미지·챕터·메타데이터)를 100% 그대로 두고 텍스트만 번역해 넣습니다. 이후 캘리버 등으로 직접 EPUB 변환하면 원본 변환 품질을 그대로 가져갈 수 있어요.</div>
+    `;
+    panel.appendChild(fmtField);
+    fmtField.querySelector('#fb2FormatSelect').addEventListener('change', e=>{
+      f.fb2OutputFormat = e.target.value;
+      document.getElementById('outExtSuffix').textContent = '.' + (f.fb2OutputFormat==='fb2' ? 'fb2' : 'epub');
+    });
+  }
+
+  const toggleRow = document.createElement('div');
+  toggleRow.className = 'toggle-row';
+  toggleRow.innerHTML = `
+    <label>파일명에 언어 코드 추가</label>
+    <label class="switch"><input type="checkbox" id="langSuffixToggle" ${f.addLangSuffix?'checked':''}/><span class="slider"></span></label>
+  `;
+  panel.appendChild(toggleRow);
+  toggleRow.querySelector('#langSuffixToggle').addEventListener('change', e=>{ f.addLangSuffix = e.target.checked; });
+
+  const heading = document.createElement('div');
+  heading.className = 'section-heading';
+  heading.textContent = '번역 언어 슬롯';
+  panel.appendChild(heading);
+
+  const slotContainer = document.createElement('div');
+  panel.appendChild(slotContainer);
+  renderSlotCards(slotContainer, f);
+
+  const addBtn = document.createElement('div');
+  addBtn.className = 'add-lang-btn';
+  addBtn.textContent = '+ 번역 언어 추가';
+  addBtn.addEventListener('click', ()=>{
+    const last = f.slots[f.slots.length-1];
+    f.slots.push(newSlot(last));
+    renderFileBlockList();
+    renderSettings();
+  });
+  panel.appendChild(addBtn);
+
+  // 🆕 여러 번역어를 한 파일에 합치기: 슬롯이 2개 이상일 때만 노출.
+  // 켜면 "원어-번역어1-번역어2..." 순서로 한 파일에 전부 쌓아서 출력 파일 1개만 만든다.
+  if (f.slots.length > 1){
+    const mergeRow = document.createElement('div');
+    mergeRow.className = 'toggle-row';
+    mergeRow.innerHTML = `
+      <label>여러 번역어를 한 파일에 합치기<br/><span style="font-size:10.5px; color:var(--text-faint); font-weight:400;">원어 → 번역어1 → 번역어2 순으로 한 파일에 쌓기</span></label>
+      <label class="switch"><input type="checkbox" id="mergeLangsToggle" ${f.mergeLangs?'checked':''}/><span class="slider"></span></label>
+    `;
+    panel.appendChild(mergeRow);
+    mergeRow.querySelector('#mergeLangsToggle').addEventListener('change', e=>{
+      f.mergeLangs = e.target.checked;
+      renderSettings();
+    });
+    if (f.mergeLangs){
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.textContent = '합치기가 켜지면 각 언어 슬롯의 "위/아래/교체" 위치 설정은 무시되고, 슬롯 순서(1→2→3...)대로 원문 아래에 번역이 차례로 이어붙은 파일 1개만 생성됩니다. (언어별 개별 파일은 생성되지 않음)';
+      panel.appendChild(note);
+    }
+  }
+
+  const translateBtn = document.createElement('button');
+  translateBtn.className = 'btn btn-ghost btn-block';
+  translateBtn.textContent = '이 파일만 번역하기';
+  translateBtn.addEventListener('click', ()=> runTranslation([f]));
+  panel.appendChild(translateBtn);
+}
+
+function renderSlotCards(container, f){
+  container.innerHTML = '';
+  const mergeMode = f.mergeLangs && f.slots.length > 1;
+  f.slots.forEach((slot, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'slot-card';
+    const sourceOpts = SOURCE_LANGS.map(([c,n])=>`<option value="${c}" ${slot.source===c?'selected':''}>${n}</option>`).join('');
+    const targetOpts = LANGS.map(([c,n])=>`<option value="${c}" ${slot.target===c?'selected':''}>${n}</option>`).join('');
+    card.innerHTML = `
+      <div class="slot-index">${idx+1}${mergeMode?'<span class="merge-badge">병합 순서 '+(idx+1)+'</span>':''}</div>
+      <div class="slot-grid">
+        <select class="src-select">${sourceOpts}</select>
+        <select class="tgt-select">${targetOpts}</select>
+      </div>
+      <div class="position-row ${mergeMode?'disabled':''}" title="${mergeMode?'합치기 모드에서는 위치 설정이 무시되고 항상 원문 아래에 순서대로 쌓입니다.':''}">
+        <div class="pos-btn ${slot.position==='below'?'active':''}" data-pos="below">아래</div>
+        <div class="pos-btn ${slot.position==='above'?'active':''}" data-pos="above">위</div>
+        <div class="pos-btn ${slot.position==='replace'?'active':''}" data-pos="replace">교체</div>
+      </div>
+      <div class="vocab-box">
+        <div class="vocab-toprow"><label>🔒 고유명사·용어 고정</label></div>
+        <textarea class="textinput glossary-input" rows="4" placeholder="한 줄에 하나씩&#10;· 원문=번역 → 강제 치환 (예: Совочка=소보치카)&#10;· 원문만 쓰면 → 번역 안 하고 원문 그대로 유지 (예: GitHub)&#10;· /패턴/플래그=번역 → 정규식 강제 치환 (어미 변화 대응)&#10;· /패턴/플래그 → 정규식 매치 제외" style="resize:vertical; font-family:var(--mono); font-size:11.5px;">${escapeHtml(slot.glossary||'')}</textarea>
+        <div class="vocab-note">같은 인물·용어가 자막마다 다르게 번역되는 문제를 막기 위해, 지정한 표현으로 결과물에서 강제 치환합니다.</div>
+      </div>
+      <div class="slot-footer">
+        <button class="slot-apply-all" title="이 언어쌍·위치·용어고정 설정을 업로드된 다른 모든 파일의 같은 순번 슬롯에도 동일하게 적용합니다.">⧉ 이 옵션 전체 파일에 적용</button>
+        ${f.slots.length>1 ? '<button class="slot-remove">삭제</button>' : ''}
+      </div>
+    `;
+    card.querySelector('.glossary-input').addEventListener('input', e=>{ slot.glossary = e.target.value; });
+    card.querySelector('.src-select').addEventListener('change', e=>{
+      slot.source = e.target.value;
+      renderSlotCards(container, f);
+    });
+    card.querySelector('.tgt-select').addEventListener('change', e=>{ slot.target = e.target.value; renderFileBlockList(); });
+    card.querySelectorAll('.pos-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        slot.position = btn.dataset.pos;
+        card.querySelectorAll('.pos-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+    const rmBtn = card.querySelector('.slot-remove');
+    if (rmBtn) rmBtn.addEventListener('click', ()=>{
+      f.slots = f.slots.filter(s=>s.id!==slot.id);
+      if (f.slots.length <= 1) f.mergeLangs = false;
+      renderFileBlockList(); renderSettings();
+    });
+    card.querySelector('.slot-apply-all').addEventListener('click', ()=>{
+      const others = uploadedFiles.filter(x=>x.id!==f.id);
+      if (!others.length){ alert('적용할 다른 파일이 없습니다 (업로드된 파일이 이것 하나뿐이에요).'); return; }
+      const label = `${langName(slot.source)} → ${langName(slot.target)}`;
+      if (!confirm(`이 슬롯 설정(${label}, 위치/용어고정 포함)을 업로드된 다른 파일 ${others.length}개의 ${idx+1}번째 슬롯에도 동일하게 적용할까요?\n(해당 파일의 ${idx+1}번째 슬롯 설정은 덮어써집니다.)`)) return;
+      others.forEach(otherF=>{
+        while (otherF.slots.length <= idx) otherF.slots.push(newSlot(slot));
+        const keepId = otherF.slots[idx].id;
+        otherF.slots[idx] = newSlot(slot);
+        otherF.slots[idx].id = keepId;
+      });
+      renderFileBlockList();
+      alert(`${others.length}개 파일에 적용 완료했습니다.`);
+    });
+    container.appendChild(card);
+  });
+}
+
+/* ================= Parsers ================= */
+function parseSRT(raw){
+  const normalized = raw.replace(/\r\n/g,'\n').trim();
+  const chunks = normalized.split(/\n\s*\n/).filter(c=>c.trim());
+  const entries = []; const blocks = [];
+  chunks.forEach((chunk,i)=>{
+    const lines = chunk.split('\n');
+    let idx, timeLine, textLines;
+    if (/^\d+$/.test(lines[0].trim())){ idx = lines[0].trim(); timeLine = lines[1]; textLines = lines.slice(2); }
+    else { idx = String(i+1); timeLine = lines[0]; textLines = lines.slice(1); }
+    const text = (textLines||[]).join('\n').trim();
+    if (!timeLine) return;
+    const id = 'b'+i;
+    entries.push({id, index: idx, time: timeLine, text});
+    if (text) blocks.push({id, text});
+  });
+  return {
+    blocks,
+    rebuild: async (translations, position) => {
+      const out = entries.map(e=>{
+        const translated = translations[e.id];
+        const original = e.text;
+        let textBlock;
+        if (translated===undefined) textBlock = original;
+        else if (position==='replace') textBlock = translated;
+        else if (position==='above') textBlock = (translated + '\n' + original).trim();
+        else textBlock = (original + '\n' + translated).trim();
+        return `${e.index}\n${e.time}\n${textBlock}`;
+      });
+      return { content: out.join('\n\n')+'\n', isBinary:false };
+    },
+    // 🆕 여러 언어를 한 파일에 합치기: transList = [{target, translations}, ...] 슬롯 순서대로.
+    // 위치 설정과 무관하게 항상 "원문 → 번역어1 → 번역어2 ..." 순으로 쌓는다.
+    rebuildMulti: async (transList) => {
+      const out = entries.map(e=>{
+        const lines = [e.text];
+        transList.forEach(t=>{
+          const tr = t.translations[e.id];
+          if (tr!==undefined) lines.push(tr);
+        });
+        return `${e.index}\n${e.time}\n${lines.join('\n---\n').trim()}`;
+      });
+      return { content: out.join('\n\n')+'\n', isBinary:false };
+    }
+  };
+}
+
+function parseVTT(raw){
+  const normalized = raw.replace(/\r\n/g,'\n').trim();
+  const lines = normalized.split('\n');
+  let startIdx = 0;
+  if (lines[0] && lines[0].trim().toUpperCase().startsWith('WEBVTT')) startIdx = 1;
+  const rest = lines.slice(startIdx).join('\n').trim();
+  const chunks = rest.split(/\n\s*\n/).filter(c=>c.trim());
+  const entries = []; const blocks = [];
+  chunks.forEach((chunk,i)=>{
+    const cl = chunk.split('\n');
+    if (cl[0] && cl[0].trim().toUpperCase().startsWith('NOTE')) return;
+    let cueId=null, timeLine, textLines;
+    if (cl[0] && cl[0].includes('-->')){ timeLine = cl[0]; textLines = cl.slice(1); }
+    else { cueId = cl[0]; timeLine = cl[1]; textLines = cl.slice(2); }
+    if (!timeLine || !timeLine.includes('-->')) return;
+    const text = textLines.join('\n').trim();
+    const id = 'b'+i;
+    entries.push({id, cueId, timeLine, text});
+    if (text) blocks.push({id, text});
+  });
+  return {
+    blocks,
+    rebuild: async (translations, position) => {
+      const body = entries.map(e=>{
+        const translated = translations[e.id];
+        const original = e.text;
+        let textBlock;
+        if (translated===undefined) textBlock = original;
+        else if (position==='replace') textBlock = translated;
+        else if (position==='above') textBlock = (translated + '\n' + original).trim();
+        else textBlock = (original + '\n' + translated).trim();
+        const idLine = e.cueId ? e.cueId+'\n' : '';
+        return `${idLine}${e.timeLine}\n${textBlock}`;
+      }).join('\n\n');
+      return { content: 'WEBVTT\n\n'+body+'\n', isBinary:false };
+    },
+    rebuildMulti: async (transList) => {
+      const body = entries.map(e=>{
+        const lines = [e.text];
+        transList.forEach(t=>{
+          const tr = t.translations[e.id];
+          if (tr!==undefined) lines.push(tr);
+        });
+        const idLine = e.cueId ? e.cueId+'\n' : '';
+        return `${idLine}${e.timeLine}\n${lines.join('\n---\n').trim()}`;
+      }).join('\n\n');
+      return { content: 'WEBVTT\n\n'+body+'\n', isBinary:false };
+    }
+  };
+}
+
+function parseTXT(raw){
+  const normalized = raw.replace(/\r\n/g,'\n');
+  let paras = normalized.split(/\n\s*\n/).map(p=>p.trim()).filter(p=>p.length);
+  if (paras.length<=1){ paras = normalized.split('\n').map(p=>p.trim()).filter(p=>p.length); }
+  const blocks = paras.map((text,i)=>({id:'b'+i, text}));
+  return {
+    blocks,
+    rebuild: async (translations, position) => {
+      const out = blocks.map(b=>{
+        const translated = translations[b.id];
+        const original = b.text;
+        let piece;
+        if (translated===undefined) piece = original;
+        else if (position==='replace') piece = translated;
+        else if (position==='above') piece = translated+'\n'+original;
+        else piece = original+'\n'+translated;
+        return piece;
+      });
+      return { content: out.join('\n\n')+'\n', isBinary:false };
+    },
+    rebuildMulti: async (transList) => {
+      const out = blocks.map(b=>{
+        const lines = [b.text];
+        transList.forEach(t=>{
+          const tr = t.translations[b.id];
+          if (tr!==undefined) lines.push(tr);
+        });
+        return lines.join('\n---\n');
+      });
+      return { content: out.join('\n\n')+'\n', isBinary:false };
+    }
+  };
+}
+
+async function parseEPUB(raw){
+  const zip = await JSZip.loadAsync(raw);
+  let opfPath = null;
+  const containerFile = zip.file('META-INF/container.xml');
+  if (containerFile){
+    const xml = await containerFile.async('string');
+    const m = xml.match(/full-path="([^"]+)"/);
+    if (m) opfPath = m[1];
+  }
+  let xhtmlPaths = [];
+  if (opfPath){
+    const opfText = await zip.file(opfPath).async('string');
+    const opfDom = new DOMParser().parseFromString(opfText, 'application/xml');
+    const baseDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/')+1) : '';
+    const manifestItems = {};
+    opfDom.querySelectorAll('manifest > item').forEach(it=>{ manifestItems[it.getAttribute('id')] = it.getAttribute('href'); });
+    opfDom.querySelectorAll('spine > itemref').forEach(ir=>{
+      const idref = ir.getAttribute('idref');
+      if (manifestItems[idref]) xhtmlPaths.push(baseDir+manifestItems[idref]);
+    });
+  }
+  if (!xhtmlPaths.length){
+    xhtmlPaths = Object.keys(zip.files).filter(p=>/\.(xhtml|html|htm)$/i.test(p) && !zip.files[p].dir);
+  }
+
+  const fileEntries = []; const blocks = []; let counter = 0;
+  const selector = 'p, li, h1, h2, h3, h4, h5, h6, blockquote, figcaption, td, th';
+  for (const path of xhtmlPaths){
+    const zf = zip.file(path);
+    if (!zf) continue;
+    const text = await zf.async('string');
+    let dom = new DOMParser().parseFromString(text, 'application/xhtml+xml');
+    if (dom.querySelector('parsererror')) dom = new DOMParser().parseFromString(text, 'text/html');
+    const els = Array.from(dom.querySelectorAll(selector)).filter(el=>{
+      const t = el.textContent.trim();
+      return t.length>0 && !el.querySelector(selector);
+    });
+    const elMap = [];
+    els.forEach(el=>{
+      const id = 'e'+(counter++);
+      const t = el.textContent.trim();
+      // 🆕 버그 수정: 이전에는 elMap이 이 dom 안의 el을 직접 참조해서, rebuild()가 슬롯마다
+      // el/dom을 그 자리에서(in-place) 고쳐썼다. 슬롯이 2개 이상이고 "합치기"를 안 쓰면
+      // rebuild()가 슬롯마다 여러 번 호출되는데, 매번 "같은" 이미 수정된 dom 위에 또 수정을
+      // 얹다 보니 두 번째 이후 슬롯의 "개별" 출력 파일에 이전 슬롯의 번역 조각이 같이 섞여
+      // 들어가는 문제가 있었다(위치가 above/below일 때 clone이 계속 누적됨).
+      // 고침: el에 자리표(data-tr-id)만 심어두고, rebuild 시점마다 dom을 매번 새로 clone해서
+      // 그 clone 안에서 data-tr-id로 요소를 다시 찾아 수정한다. 원본 dom(entry.dom)은
+      // 이제부터 절대 직접 수정하지 않는 "읽기 전용 템플릿"으로만 쓴다.
+      el.setAttribute('data-tr-id', id);
+      elMap.push({id});
+      blocks.push({id, text:t});
+    });
+    fileEntries.push({path, dom, elMap});
+  }
+
+  return {
+    blocks,
+    rebuild: async (translations, position) => {
+      const outZip = await JSZip.loadAsync(raw);
+      const serializer = new XMLSerializer();
+      for (const entry of fileEntries){
+        const freshDom = entry.dom.cloneNode(true); // 항상 원본 템플릿에서 새로 복제
+        entry.elMap.forEach(({id})=>{
+          const el = freshDom.querySelector(`[data-tr-id="${id}"]`);
+          if (!el) return;
+          el.removeAttribute('data-tr-id');
+          const translated = translations[id];
+          if (translated!==undefined){
+            if (position==='replace'){
+              el.textContent = translated;
+            } else {
+              const clone = el.ownerDocument.createElement(el.tagName);
+              const existingClass = el.getAttribute('class') || '';
+              clone.setAttribute('class', (existingClass+' translated-block').trim());
+              clone.textContent = translated;
+              if (position==='above') el.parentNode.insertBefore(clone, el);
+              else el.parentNode.insertBefore(clone, el.nextSibling);
+            }
+          }
+        });
+        let serialized = serializer.serializeToString(freshDom);
+        if (!/^<\?xml/.test(serialized)) serialized = '<?xml version="1.0" encoding="utf-8"?>\n'+serialized;
+        outZip.file(entry.path, serialized);
+      }
+      const blob = await outZip.generateAsync({type:'blob', mimeType:'application/epub+zip'});
+      return { content: blob, isBinary:true };
+    },
+    // 🆕 여러 언어를 한 파일에 합치기: 각 원문 요소 뒤에 번역어1, 번역어2 ... 순서로
+    // 형제 요소를 이어붙인다(위치 설정은 무시, 항상 원문 다음에 순서대로).
+    rebuildMulti: async (transList) => {
+      const outZip = await JSZip.loadAsync(raw);
+      const serializer = new XMLSerializer();
+      for (const entry of fileEntries){
+        const freshDom = entry.dom.cloneNode(true);
+        entry.elMap.forEach(({id})=>{
+          const el = freshDom.querySelector(`[data-tr-id="${id}"]`);
+          if (!el) return;
+          el.removeAttribute('data-tr-id');
+          let anchor = el;
+          transList.forEach(t=>{
+            const translated = t.translations[id];
+            if (translated===undefined) return;
+            const clone = el.ownerDocument.createElement(el.tagName);
+            const existingClass = el.getAttribute('class') || '';
+            clone.setAttribute('class', (existingClass+' translated-block translated-'+t.target).trim());
+            clone.textContent = translated;
+            anchor.parentNode.insertBefore(clone, anchor.nextSibling);
+            anchor = clone;
+          });
+        });
+        let serialized = serializer.serializeToString(freshDom);
+        if (!/^<\?xml/.test(serialized)) serialized = '<?xml version="1.0" encoding="utf-8"?>\n'+serialized;
+        outZip.file(entry.path, serialized);
+      }
+      const blob = await outZip.generateAsync({type:'blob', mimeType:'application/epub+zip'});
+      return { content: blob, isBinary:true };
+    }
+  };
+}
+
+/* 🆕 이번 대화: chapters에 parentIndex(중첩 목차용, -1=최상위)를 받아서 toc.ncx의 navMap을
+   실제 계층 구조(2단 이상)로 만든다. 캘리버처럼 하위 섹션도 목차에서 펼쳐볼 수 있게. */
+async function buildEpubFromChapters(title, chapters, images, coverImageFilename){
+  images = images || [];
+  const zip = new JSZip();
+  zip.file('mimetype', 'application/epub+zip', {compression:'STORE'});
+  zip.folder('META-INF').file('container.xml',
+    `<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`);
+  const oebps = zip.folder('OEBPS');
+  chapters.forEach((c,i)=> oebps.file(`chapter${i+1}.xhtml`, c.xhtml));
+  const imagesFolder = oebps.folder('images');
+  images.forEach(img=> imagesFolder.file(img.filename, img.base64, {base64:true}));
+
+  const manifestChapters = chapters.map((c,i)=>`<item id="chap${i+1}" href="chapter${i+1}.xhtml" media-type="application/xhtml+xml"/>`).join('\n');
+  const manifestImages = images.map(img=>{
+    const isCover = img.filename === coverImageFilename;
+    return `<item id="${img.id}" href="images/${img.filename}" media-type="${img.mediaType}"${isCover ? ' properties="cover-image"' : ''}/>`;
+  }).join('\n');
+  const spineItems = chapters.map((c,i)=>`<itemref idref="chap${i+1}"/>`).join('\n');
+  const bookId = 'urn:uuid:' + (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+'-'+Math.random()));
+  const coverImg = images.find(img=>img.filename===coverImageFilename);
+  const coverMeta = coverImg ? `<meta name="cover" content="${coverImg.id}"/>` : '';
+  oebps.file('content.opf', `<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+<dc:title>${escapeHtml(title)}</dc:title>
+<dc:language>und</dc:language>
+<dc:identifier id="BookId">${bookId}</dc:identifier>
+${coverMeta}
+</metadata>
+<manifest>
+${manifestChapters}
+${manifestImages}
+<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+</manifest>
+<spine toc="ncx">
+${spineItems}
+</spine>
+</package>`);
+  // 🆕 parentIndex 기준으로 재귀적으로 중첩 navPoint를 만든다 (2단 이상 목차 지원)
+  let playOrder = 0;
+  function buildNavPoints(parentIdx){
+    return chapters.map((c,i)=>({c,i})).filter(({c})=>c.parentIndex===parentIdx).map(({c,i})=>{
+      playOrder++;
+      const myOrder = playOrder; // 재귀로 자식을 먼저 처리하면서 playOrder가 더 늘어나기 전에 이 챕터의 순번을 고정
+      const children = buildNavPoints(i).join('\n');
+      return `<navPoint id="nav${i+1}" playOrder="${myOrder}"><navLabel><text>${escapeHtml(c.title)}</text></navLabel><content src="chapter${i+1}.xhtml"/>${children}</navPoint>`;
+    });
+  }
+  const navPoints = buildNavPoints(-1).join('\n');
+  oebps.file('toc.ncx', `<?xml version="1.0" encoding="utf-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+<head><meta name="dtb:uid" content="${bookId}"/></head>
+<docTitle><text>${escapeHtml(title)}</text></docTitle>
+<navMap>
+${navPoints}
+</navMap>
+</ncx>`);
+  return await zip.generateAsync({type:'blob', mimeType:'application/epub+zip'});
+}
+
+/* 🆕 이번 대화(2차 수정): FB2 파이프라인 재작성 v2 — 이전 버전(v5)에서 남아있던 문제 3가지를
+   실제 캘리버 결과물과 비교해서 확인하고 고침:
+   1) 표지 누락 가능성: CSS 결합선택자(`title-info coverpage image` 등)는 fb2가 접두사 붙은
+      네임스페이스(예: <fb:body>, <fb:image>)를 쓰면 매칭이 깨질 수 있었음 → 전부 `localName`
+      기준 수동 순회(findDescendant/findDescendants)로 교체해서 네임스페이스 표기와 무관하게 동작.
+   2) 삽화(인라인 이미지) 누락: <image>가 <section> 바로 아래가 아니라 <p> "안"에 중첩되는 경우
+      (실제 fb2 생성기들이 흔히 이렇게 씀)를 못 잡았음 → 이제 p 처리 시 내부에 중첩된 <image>도
+      찾아서 문단 바로 뒤에 삽입.
+   3) 목차가 1단(최상위 section)만 나옴: 중첩 section을 같은 챕터 파일 안에 헤딩만 깊게 해서
+      뭉쳤었음 → 이제 **모든 깊이의 section**을 각각 별도 챕터 파일로 분리하고, buildEpubFromChapters의
+      parentIndex로 실제 중첩 목차(2단 이상)를 만든다 — 캘리버처럼 챕터 수가 많아짐.
+   🆕 추가: 출력 형식을 "EPUB 변환" 대신 "FB2 유지(번역만)"로 선택할 수 있게 rebuild()가 format
+   인자를 받는다. FB2 유지 모드는 원본 XML을 그대로 복제해서 텍스트 요소만 교체/추가하므로
+   이미지·챕터 구조 보존 문제 자체가 애초에 발생하지 않는다(원본 구조를 100% 그대로 씀) — 대신
+   최종 epub 변환은 사용자가 캘리버 등으로 직접 하게 된다. */
+function fb2LocalName(el){ return el.tagName ? el.tagName.toLowerCase().replace(/^[a-z0-9]+:/,'') : ''; }
+function fb2FindHrefAttr(el){
+  for (const attr of Array.from(el.attributes)){
+    if (/href$/i.test(attr.name)) return attr.value;
+  }
+  return null;
+}
+function fb2FindDescendant(root, name){
+  const all = root.getElementsByTagName('*');
+  for (let i=0;i<all.length;i++){ if (fb2LocalName(all[i])===name) return all[i]; }
+  return null;
+}
+function fb2FindDescendants(root, name){
+  const all = root.getElementsByTagName('*');
+  const out = [];
+  for (let i=0;i<all.length;i++){ if (fb2LocalName(all[i])===name) out.push(all[i]); }
+  return out;
+}
+function fb2DirectChildren(el, name){
+  return Array.from(el.children).filter(c=> fb2LocalName(c)===name);
+}
+const FB2_IMAGE_EXT = { 'image/jpeg':'jpg', 'image/jpg':'jpg', 'image/png':'png', 'image/gif':'gif', 'image/webp':'webp', 'image/svg+xml':'svg' };
+
+async function parseFB2(raw){
+  const dom = new DOMParser().parseFromString(raw, 'application/xml');
+  if (dom.querySelector('parsererror')) throw new Error('FB2 XML 파싱 실패');
+  const titleInfoEl = fb2FindDescendant(dom.documentElement, 'title-info');
+  const bookTitleEl = (titleInfoEl && fb2FindDescendant(titleInfoEl, 'book-title')) || fb2FindDescendant(dom.documentElement, 'book-title');
+  const bookTitle = bookTitleEl ? bookTitleEl.textContent.trim() : '제목없음';
+
+  // 1) 삽화(binary) 추출: id -> {mediaType, base64, filename}
+  const imageById = {};
+  const images = [];
+  fb2FindDescendants(dom.documentElement, 'binary').forEach((bEl, i)=>{
+    const id = bEl.getAttribute('id');
+    if (!id) return;
+    const contentType = (bEl.getAttribute('content-type')||'image/jpeg').toLowerCase();
+    const ext = FB2_IMAGE_EXT[contentType] || 'jpg';
+    const filename = `img${i+1}.${ext}`;
+    const base64 = (bEl.textContent||'').replace(/\s+/g,'');
+    const rec = { id: 'img'+(i+1), filename, mediaType: contentType, base64, fb2Id:id };
+    imageById[id] = rec;
+    images.push(rec);
+  });
+
+  // 2) 표지 이미지 판별 (description > title-info > coverpage > image) — localName 기반이라 네임스페이스 접두사 무관
+  let coverImageFilename = null;
+  const coverpageEl = titleInfoEl ? fb2FindDescendant(titleInfoEl, 'coverpage') : fb2FindDescendant(dom.documentElement, 'coverpage');
+  const coverImageEl = coverpageEl ? fb2FindDescendant(coverpageEl, 'image') : null;
+  if (coverImageEl){
+    const href = (fb2FindHrefAttr(coverImageEl)||'').replace(/^#/,'');
+    if (imageById[href]) coverImageFilename = imageById[href].filename;
+  }
+
+  // 3) 번역 대상 블록 생성 + 원본 엘리먼트에 data-blk 태깅(FB2 유지 출력 모드에서 되찾아 쓰기 위함)
+  const blocks = []; const blocksById = new Map();
+  let counter = 0;
+  function addBlock(text, el){
+    const t = (text||'').trim();
+    if (!t) return null;
+    const id = 'e'+(counter++);
+    blocks.push({id, text:t});
+    blocksById.set(id, t);
+    if (el) el.setAttribute('data-blk', id);
+    return id;
+  }
+
+  // 4) 챕터 트리 생성: section을 만나면 "깊이 상관없이" 새 챕터로 분리하고 parentIndex로 계층을 기록.
+  //    그 외 태그는 renderChildren이 재귀적으로 처리해서 현재 챕터의 nodes 배열에 쌓는다.
+  const chapters = []; // {title, nodes, parentIndex}
+  function renderChildren(containerEl, chapterIndex){
+    const nodes = [];
+    Array.from(containerEl.children).forEach(el=>{
+      const tag = fb2LocalName(el);
+      switch(tag){
+        case 'section': {
+          const titleEl = fb2DirectChildren(el,'title')[0];
+          const chapTitle = titleEl ? titleEl.textContent.trim().replace(/\s+/g,' ') : `챕터 ${chapters.length+1}`;
+          const childIdx = chapters.length;
+          chapters.push({ title: chapTitle, nodes: [], parentIndex: chapterIndex });
+          chapters[childIdx].nodes = renderChildren(el, childIdx);
+          break; // 중첩 section은 부모 챕터의 nodes에는 포함되지 않음(별도 챕터 파일이 됨)
+        }
+        case 'title': {
+          const pTexts = fb2DirectChildren(el,'p').map(p=>p.textContent.trim()).filter(Boolean);
+          const text = pTexts.length ? pTexts.join(' ') : el.textContent.trim();
+          const id = addBlock(text, el);
+          if (id) nodes.push({type:'heading', id});
+          break;
+        }
+        case 'subtitle': {
+          const id = addBlock(el.textContent, el);
+          if (id) nodes.push({type:'subtitle', id});
+          break;
+        }
+        case 'p': {
+          const id = addBlock(el.textContent, el);
+          if (id) nodes.push({type:'p', id});
+          // 🆕 <p> 안에 중첩된 <image>(인라인 삽화)도 찾아서 문단 바로 뒤에 배치
+          fb2FindDescendants(el, 'image').forEach(imgEl=>{
+            const href = (fb2FindHrefAttr(imgEl)||'').replace(/^#/,'');
+            const rec = imageById[href];
+            if (rec) nodes.push({type:'image', filename: rec.filename});
+          });
+          break;
+        }
+        case 'empty-line':
+          nodes.push({type:'empty-line'});
+          break;
+        case 'image': {
+          const href = (fb2FindHrefAttr(el)||'').replace(/^#/,'');
+          const rec = imageById[href];
+          if (rec) nodes.push({type:'image', filename: rec.filename});
+          break;
+        }
+        case 'epigraph':
+        case 'cite': {
+          nodes.push({type:'quote-open', tag});
+          nodes.push(...renderChildren(el, chapterIndex));
+          nodes.push({type:'quote-close'});
+          break;
+        }
+        case 'text-author': {
+          const id = addBlock(el.textContent, el);
+          if (id) nodes.push({type:'text-author', id});
+          break;
+        }
+        case 'poem':
+          nodes.push(...renderChildren(el, chapterIndex));
+          break;
+        case 'stanza': {
+          fb2DirectChildren(el,'v').forEach(v=>{
+            const id = addBlock(v.textContent, v);
+            if (id) nodes.push({type:'verse', id});
+          });
+          nodes.push({type:'empty-line'});
+          break;
+        }
+        case 'annotation':
+        case 'table':
+          fb2FindDescendants(el,'p').concat(fb2FindDescendants(el,'td'), fb2FindDescendants(el,'th')).forEach(p=>{
+            const id = addBlock(p.textContent, p);
+            if (id) nodes.push({type:'p', id});
+          });
+          break;
+        default:
+          nodes.push(...renderChildren(el, chapterIndex));
+      }
+    });
+    return nodes;
+  }
+
+  const bodies = fb2DirectChildren(dom.documentElement, 'body');
+  bodies.forEach(bodyEl=>{
+    const idx = chapters.length;
+    chapters.push({ title: bookTitle, nodes: [], parentIndex: -1 }); // 자리 예약(내용 없으면 아래서 정리됨)
+    chapters[idx].nodes = renderChildren(bodyEl, idx);
+  });
+  // 내용이 비어있는 "빈 껍데기" 챕터(대부분 body 자체, 실제 내용은 전부 하위 section으로 갔을 때)는
+  // 제거하고 그 자식들을 조부모로 승격시킨다 — 그래야 목차가 쓸데없는 빈 항목 없이 깔끔해짐.
+  for (let i=chapters.length-1; i>=0; i--){
+    if (chapters[i].nodes.length===0){
+      const parent = chapters[i].parentIndex;
+      chapters.forEach(c=>{ if (c.parentIndex===i) c.parentIndex = parent; });
+      chapters[i]._drop = true;
+    }
+  }
+  let kept = chapters.filter(c=>!c._drop);
+  if (!kept.length) kept = [{ title: bookTitle, nodes: [], parentIndex: -1 }];
+  const idxMap = new Map();
+  chapters.forEach((c,i)=>{ if (!c._drop) idxMap.set(i, kept.indexOf(c)); });
+  kept.forEach(c=>{ c.parentIndex = c.parentIndex===-1 ? -1 : idxMap.get(c.parentIndex); });
+
+  function renderNodesToXhtmlParts(nodes, translations, position){
+    const wrap = (t, cls) => `<p class="${cls}">${escapeHtml(t)}</p>`;
+    function renderBlockPair(id, cls){
+      const original = blocksById.get(id) || '';
+      const translated = translations[id];
+      const out = [];
+      if (translated===undefined){ out.push(wrap(original, cls+' orig')); }
+      else if (position==='replace') out.push(wrap(translated, cls+' tr'));
+      else if (position==='above'){ out.push(wrap(translated, cls+' tr')); out.push(wrap(original, cls+' orig')); }
+      else { out.push(wrap(original, cls+' orig')); out.push(wrap(translated, cls+' tr')); }
+      return out;
+    }
+    const parts = [];
+    nodes.forEach(n=>{
+      switch(n.type){
+        case 'heading': parts.push(...renderBlockPair(n.id, 'h2')); break;
+        case 'subtitle': parts.push(...renderBlockPair(n.id, 'subtitle')); break;
+        case 'p': parts.push(...renderBlockPair(n.id, 'p')); break;
+        case 'verse': parts.push(...renderBlockPair(n.id, 'verse')); break;
+        case 'text-author': parts.push(...renderBlockPair(n.id, 'text-author')); break;
+        case 'empty-line': parts.push('<div class="empty-line"></div>'); break;
+        case 'image': parts.push(`<img src="images/${escapeHtml(n.filename)}" alt=""/>`); break;
+        case 'quote-open': parts.push(`<div class="${n.tag}">`); break;
+        case 'quote-close': parts.push('</div>'); break;
+      }
+    });
+    return parts;
+  }
+
+  // 🆕 여러 언어를 한 파일에 합치기: transList = [{target, translations}, ...] 슬롯 순서대로,
+  // 항상 "원문 → 번역어1 → 번역어2 ..." 순으로 쌓는다(위치 설정 없음, single 버전과 로직 공유).
+  function renderNodesToXhtmlPartsMulti(nodes, transList){
+    const wrap = (t, cls) => `<p class="${cls}">${escapeHtml(t)}</p>`;
+    function renderBlockPairMulti(id, cls){
+      const original = blocksById.get(id) || '';
+      const out = [wrap(original, cls+' orig')];
+      transList.forEach(t=>{
+        const tr = t.translations[id];
+        if (tr!==undefined) out.push(wrap(tr, cls+' tr tr-'+t.target));
+      });
+      return out;
+    }
+    const parts = [];
+    nodes.forEach(n=>{
+      switch(n.type){
+        case 'heading': parts.push(...renderBlockPairMulti(n.id, 'h2')); break;
+        case 'subtitle': parts.push(...renderBlockPairMulti(n.id, 'subtitle')); break;
+        case 'p': parts.push(...renderBlockPairMulti(n.id, 'p')); break;
+        case 'verse': parts.push(...renderBlockPairMulti(n.id, 'verse')); break;
+        case 'text-author': parts.push(...renderBlockPairMulti(n.id, 'text-author')); break;
+        case 'empty-line': parts.push('<div class="empty-line"></div>'); break;
+        case 'image': parts.push(`<img src="images/${escapeHtml(n.filename)}" alt=""/>`); break;
+        case 'quote-open': parts.push(`<div class="${n.tag}">`); break;
+        case 'quote-close': parts.push('</div>'); break;
+      }
+    });
+    return parts;
+  }
+
+  /* 🆕 "FB2 유지(번역만)" 출력 모드: 원본 XML을 복제해서 data-blk 태그가 붙은 요소만 텍스트를
+     교체/추가한다. 이미지·바이너리·챕터 구조는 원본 그대로라 애초에 유실될 일이 없다. */
+  function rebuildFb2Passthrough(translations, position){
+    const clone = dom.cloneNode(true);
+    const ns = clone.documentElement.namespaceURI;
+    // 🆕 el.textContent = '...' 는 nested 자식(예: <p> 안에 중첩된 <image> 삽화)까지 통째로
+    // 지워버려서, 인라인 삽화가 있는 문단을 번역하면 그 삽화가 사라지는 버그가 있었음.
+    // 텍스트 노드만 걷어내고 element 자식(이미지 등)은 제자리에 그대로 둔다.
+    function setTextPreservingChildren(el, text){
+      Array.from(el.childNodes).forEach(n=>{ if (n.nodeType===3) el.removeChild(n); });
+      el.insertBefore(clone.createTextNode(text), el.firstChild);
+    }
+    clone.querySelectorAll('[data-blk]').forEach(el=>{
+      const id = el.getAttribute('data-blk');
+      el.removeAttribute('data-blk');
+      const original = blocksById.get(id) || '';
+      const translated = translations[id];
+      const tag = fb2LocalName(el);
+      const makeLike = (text) => { const e = clone.createElementNS(ns, tag==='title'?'p':tag); e.textContent = text; return e; };
+      if (tag==='title'){
+        Array.from(el.children).forEach(c=> el.removeChild(c));
+        if (translated===undefined){ el.appendChild(makeLike(original)); return; }
+        if (position==='replace') el.appendChild(makeLike(translated));
+        else if (position==='above'){ el.appendChild(makeLike(translated)); el.appendChild(makeLike(original)); }
+        else { el.appendChild(makeLike(original)); el.appendChild(makeLike(translated)); }
+        return;
+      }
+      if (translated===undefined){ setTextPreservingChildren(el, original); }
+      else if (position==='replace'){ setTextPreservingChildren(el, translated); }
+      else if (position==='above'){ setTextPreservingChildren(el, original); el.parentNode.insertBefore(makeLike(translated), el); }
+      else { setTextPreservingChildren(el, original); el.parentNode.insertBefore(makeLike(translated), el.nextSibling); }
+    });
+    const xml = new XMLSerializer().serializeToString(clone);
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
+  }
+
+  // 🆕 "FB2 유지" + 여러 언어 합치기: 원본 요소 뒤에 번역어1, 번역어2 ... 순서로
+  // 형제 요소를 이어붙인다(위치 설정 없음, 항상 원문 다음에 순서대로).
+  function rebuildFb2PassthroughMulti(transList){
+    const clone = dom.cloneNode(true);
+    const ns = clone.documentElement.namespaceURI;
+    function setTextPreservingChildren(el, text){
+      Array.from(el.childNodes).forEach(n=>{ if (n.nodeType===3) el.removeChild(n); });
+      el.insertBefore(clone.createTextNode(text), el.firstChild);
+    }
+    clone.querySelectorAll('[data-blk]').forEach(el=>{
+      const id = el.getAttribute('data-blk');
+      el.removeAttribute('data-blk');
+      const original = blocksById.get(id) || '';
+      const tag = fb2LocalName(el);
+      const makeLike = (text) => { const e = clone.createElementNS(ns, tag==='title'?'p':tag); e.textContent = text; return e; };
+      if (tag==='title'){
+        Array.from(el.children).forEach(c=> el.removeChild(c));
+        el.appendChild(makeLike(original));
+        transList.forEach(t=>{
+          const tr = t.translations[id];
+          if (tr!==undefined) el.appendChild(makeLike(tr));
+        });
+        return;
+      }
+      setTextPreservingChildren(el, original);
+      let anchor = el;
+      transList.forEach(t=>{
+        const tr = t.translations[id];
+        if (tr===undefined) return;
+        const node = makeLike(tr);
+        anchor.parentNode.insertBefore(node, anchor.nextSibling);
+        anchor = node;
+      });
+    });
+    const xml = new XMLSerializer().serializeToString(clone);
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
+  }
+
+  return {
+    blocks,
+    rebuild: async (translations, position, format) => {
+      format = format || 'epub';
+      if (format === 'fb2'){
+        const xml = rebuildFb2Passthrough(translations, position);
+        return { content: xml, isBinary:false };
+      }
+      const chapterFiles = kept.map(chap=>{
+        const parts = renderNodesToXhtmlParts(chap.nodes, translations, position);
+        const xhtml = `<?xml version="1.0" encoding="utf-8"?>\n<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"/><title>${escapeHtml(chap.title)}</title></head><body>${parts.join('\n')}</body></html>`;
+        return { title: chap.title, xhtml, parentIndex: chap.parentIndex };
+      });
+      const blob = await buildEpubFromChapters(bookTitle, chapterFiles, images, coverImageFilename);
+      return { content: blob, isBinary:true };
+    },
+    // 🆕 여러 언어를 한 파일에 합치기: format이 'fb2'면 원본 구조를 유지한 채 텍스트만
+    // 원문+번역어들을 순서대로 추가, 'epub'이면 각 챕터에 원문+번역어들을 순서대로 렌더링.
+    rebuildMulti: async (transList, format) => {
+      format = format || 'epub';
+      if (format === 'fb2'){
+        const xml = rebuildFb2PassthroughMulti(transList);
+        return { content: xml, isBinary:false };
+      }
+      const chapterFiles = kept.map(chap=>{
+        const parts = renderNodesToXhtmlPartsMulti(chap.nodes, transList);
+        const xhtml = `<?xml version="1.0" encoding="utf-8"?>\n<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"/><title>${escapeHtml(chap.title)}</title></head><body>${parts.join('\n')}</body></html>`;
+        return { title: chap.title, xhtml, parentIndex: chap.parentIndex };
+      });
+      const blob = await buildEpubFromChapters(bookTitle, chapterFiles, images, coverImageFilename);
+      return { content: blob, isBinary:true };
+    }
+  };
+}
+
+async function parseFile(item){
+  switch(item.ext){
+    case 'srt': return parseSRT(item.raw);
+    case 'vtt': return parseVTT(item.raw);
+    case 'txt': return parseTXT(item.raw);
+    case 'epub': return await parseEPUB(item.raw);
+    case 'fb2': return await parseFB2(item.raw);
+    default: throw new Error('지원하지 않는 형식');
+  }
+}
+
+/* ================= Translation engine ================= */
+/* 🆕 2) 번역 전 비인쇄 문자 제거: EPUB/FB2 파싱 과정에서 zero-width space,
+   BOM, 방향성 제어문자, 그 외 C0/C1 제어문자가 섞여 들어올 수 있는데, 이런 게
+   구글 번역에 들어가면 결과가 미묘하게 깨지거나(캘리버 체인지로그에도 같은
+   이유로 제거 로직이 있음) 마커 파싱을 방해할 수 있다. \n \t \r 은 의도된
+   서식이므로 건드리지 않는다. */
+const NON_PRINTABLE_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g;
+function stripNonPrintable(text){
+  return text.replace(NON_PRINTABLE_RE, '');
+}
+
+/* 🆕 1) 긴 문단 안전 분할: 구글 무료 엔드포인트(GET, q= 파라미터)는 텍스트가
+   길어지면(특히 한글/키릴 등 비라틴 문자는 퍼센트 인코딩되면서 3배 가까이
+   부풀어 URL이 실제 상한을 넘기 쉬움) 요청이 실패하거나 응답이 잘릴 수 있다
+   (캘리버도 체인지로그에 이 문제를 고친 이력이 있음). SAFE_LEN은 기존
+   문서 청킹(CHUNK_PROFILES.document.maxChars=1800)이 실전에서 이미 안전하다고
+   검증된 값이라 그대로 재사용한다. 문장 경계에서 우선 자르고, 문장부호 없이
+   SAFE_LEN보다 긴 한 "문장"이 있으면 최후 수단으로 강제로 자른다. */
+const SAFE_LEN = 1800;
+/* 🆕 문장 경계 정규식: 기존엔 마침표 뒤에 공백이 최소 1개 있어야만 문장 경계로
+   인정했는데(\s+), OCR로 뽑은 텍스트는 "...страны.Дляжителей..."처럼 마침표
+   직후 공백 없이 바로 다음 문장(대문자로 시작)이 붙어있는 경우가 흔하다(이번
+   대화에서 실제로 발견된 케이스). 그런 텍스트는 마침표+공백 조합을 못 찾아서
+   문장이 통째로 하나로 뭉치고, 그 결과 강제 글자수 분할(아래)로 넘어가 단어가
+   중간에 잘리는 원인이 됐다. \s*(대문자 앞) 형태로 완화해서 공백 없는 마침표도
+   문장 경계로 인식하게 한다. u플래그 + \p{Lu}(임의 스크립트의 대문자, 키릴 포함). */
+const SENTENCE_SPLIT_RE = /(?<=[.!?…"'"'`”)\]])\s*(?=$|\p{Lu}|["'"'`“(])/gu;
+/* 🆕 강제 분할(문장 하나가 그 자체로 maxLen을 넘는 경우)도 이제 무조건 글자수로
+   뚝 자르지 않는다. 우선순위: ①직전 문장부호(.!?… 등) 경계 → ②직전 공백(단어
+   경계) → ③그래도 못 찾으면(공백이 단 하나도 없는 극단적 케이스) 최후 수단으로
+   글자수 강제 절단. 즉 단어도, 문장도 웬만하면 안 끊긴다. */
+function findSafeBreak(s, maxLen){
+  const window = s.slice(0, maxLen);
+  // ① 문장부호 경계: window 안에서 가장 마지막에 나오는 문장 끝 지점을 찾는다
+  const endRe = /[.!?…][”"'’)\]]*/g;
+  let lastSentenceEnd = -1, m;
+  while ((m = endRe.exec(window))){
+    lastSentenceEnd = m.index + m[0].length;
+  }
+  if (lastSentenceEnd > 0) return lastSentenceEnd;
+  // ② 단어 경계: window 안에서 가장 마지막 공백
+  const lastSpace = window.lastIndexOf(' ');
+  if (lastSpace > 0) return lastSpace;
+  const lastNewline = Math.max(window.lastIndexOf('\n'), window.lastIndexOf('\t'));
+  if (lastNewline > 0) return lastNewline;
+  // ③ 최후 수단: 공백/문장부호가 정말 하나도 없는 경우(예: 공백 없는 긴 URL,
+  // 혹은 OCR이 공백까지 통째로 날려버린 극단적 케이스)에만 글자수로 절단
+  return maxLen;
+}
+function splitForSafeTranslate(text, maxLen){
+  if (text.length <= maxLen) return [text];
+  const sentences = text.split(SENTENCE_SPLIT_RE);
+  const pieces = [];
+  let cur = '';
+  for (let s of sentences){
+    while (s.length > maxLen){
+      if (cur){ pieces.push(cur); cur = ''; }
+      const cut = findSafeBreak(s, maxLen);
+      const piece = s.slice(0, cut).trimEnd();
+      if (piece) pieces.push(piece);
+      s = s.slice(cut).trimStart();
+    }
+    if (cur && (cur.length + 1 + s.length) > maxLen){
+      pieces.push(cur);
+      cur = s;
+    } else {
+      cur = cur ? cur + ' ' + s : s;
+    }
+  }
+  if (cur) pieces.push(cur);
+  return pieces.length ? pieces : [text.slice(0, maxLen)];
+}
+/* SAFE_LEN을 넘는 텍스트는 조각내서 순서대로 번역한 뒤 이어붙인다. 조각별
+   요청은 병렬로 보내되(속도), 결과는 원래 순서를 지켜서 합친다(정확성). */
+async function gtranslateSafe(text, sl, tl, kind){
+  const pieces = splitForSafeTranslate(text, SAFE_LEN);
+  if (pieces.length === 1) return gtranslateRaw(pieces[0], sl, tl, kind);
+  const results = await Promise.all(pieces.map(p => gtranslateRaw(p, sl, tl, kind)));
+  const translated = results.map(r => r.translated).join(' ');
+  const detected = (results.find(r => r.detected) || {}).detected || null;
+  return { translated, detected };
+}
+
+/* 🆕 캘리버 플러그인의 무료 Google 엔진은 사실 3종류다(engines/google.py 실제
+   소스 확인함, GPLv3라 코드는 안 베꼈고 "어떤 엔드포인트/파라미터를 쓰는지"만
+   참고): GoogleFreeTranslateNew(translate-pa.googleapis.com/v1/translate,
+   캘리버가 "casual user에게 추천"이라고 명시한 사실상의 기본값),
+   GoogleFreeTranslateHtml(translateHtml, HTML 전용), GoogleFreeTranslate("Old"
+   라벨, translate.googleapis.com/translate_a/single — 지금까지 우리 앱이 계속
+   써온 바로 그 엔드포인트). 즉 우리가 "로직"(문단별 개별 요청)은 캘리버와
+   이미 거의 동일했지만, 정작 캘리버가 기본으로 추천하는 건 우리가 안 쓰던
+   더 새 엔드포인트였다 — 사용자가 비교했던 품질차의 실질적 원인일 가능성.
+   translate-pa 쪽이 CORS/리퍼러 정책상 브라우저에서 막힐 수도 있어서, 세션
+   시작 시 한 번만 프로브해보고 되면 계속 새 엔드포인트를 우선 쓰고, 막히면
+   그 세션 내내 기존 엔드포인트로 조용히 전환한다(매 요청마다 두 번 시도하며
+   느려지는 것 방지). */
+const GOOGLE_NEW_API_KEY = 'AIzaSyDLEeFI5OtFBwYBIoK_jj5m32rZK5CkCXA'; // 캘리버 소스 및 다수의 다른 오픈소스 프로젝트(Go 패키지, AutoHotkey 커뮤니티 등)에도 동일하게 공개돼 있는 구글 자체 웹 프런트용 클라이언트 키. 결제 계정 미연결, 별도 발급/등록 불필요.
+let newEndpointStatus = null; // null=아직 모름, true=사용 가능, false=이번 세션엔 불가(CORS 등)로 폴백 확정
+let newEndpointProbePromise = null;
+
+function onNewEndpointProbed(ok){
+  const note = document.getElementById('newEndpointStatusNote');
+  if (!note) return;
+  note.textContent = ok
+    ? '✅ 새 엔드포인트(translate-pa) 접속 확인됨 — 이번 세션은 이걸 우선 사용합니다.'
+    : '⚠️ 새 엔드포인트 접속 실패(브라우저 CORS 등) — 이번 세션은 자동으로 기존 방식(translate_a/single)을 사용합니다.';
+}
+
+async function gtranslateRawNew(text, sl, tl){
+  const params = new URLSearchParams({
+    'params.client': 'gtx',
+    'query.source_language': sl,
+    'query.target_language': tl,
+    'query.display_language': 'en-US',
+    'data_types': 'TRANSLATION',
+    'key': GOOGLE_NEW_API_KEY,
+    'query.text': text
+  });
+  const url = `https://translate-pa.googleapis.com/v1/translate?${params.toString()}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  if (typeof data.translation !== 'string') throw new Error('unexpected response shape');
+  const detected = data.sourceLanguage || data.source_language || null;
+  return { translated: data.translation, detected };
+}
+
+async function gtranslateRawOld(text, sl, tl){
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  const translated = data[0].map(seg=>seg[0]||'').join('');
+  const detected = data[2] || null;
+  return { translated, detected };
+}
+
+/* 🆕 Google AI Studio(Gemini) API로 번역(키 1개 기준). 무료 구글 번역(NMT)과 달리 LLM이라
+   문맥/문체 반영은 기대할 수 있지만, 마커(‖0‖ 등)·글로서리 플레이스홀더(◆GL0◆ 등)를 프롬프트
+   규칙만으로 강제하는 것이라 100% 보장은 아님. apiKey를 명시적으로 받아서, 여러 키를 돌아가며
+   시도하는 gtranslateRawGemini()와 "연결 테스트" 버튼(키별 개별 테스트) 양쪽에서 재사용한다.
+   kind는 'subtitle'|'document' — 자막/문서용으로 따로 편집 가능한 프롬프트 템플릿(아래 buildGeminiPrompt
+   참고)을 골라 쓰기 위한 값이며, 생략되면 문서용 템플릿을 기본으로 쓴다. */
+async function gtranslateRawGeminiWithKey(text, sl, tl, apiKey, kind){
+  const model = (advancedOpts.geminiModel && advancedOpts.geminiModel.trim()) || 'gemini-flash-latest';
+  const prompt = buildGeminiPrompt(kind, sl, tl, text);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0 }
+    })
+  });
+  if (!res.ok){
+    let msg = 'HTTP ' + res.status;
+    try {
+      const errBody = await res.json();
+      if (errBody && errBody.error && errBody.error.message) msg += ': ' + errBody.error.message;
+    } catch(e){}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  const cand = data && data.candidates && data.candidates[0];
+  const parts = cand && cand.content && cand.content.parts;
+  const translated = Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '';
+  if (!translated.trim()){
+    const reason = cand && cand.finishReason ? (' (finishReason: ' + cand.finishReason + ')') : '';
+    throw new Error('빈 응답' + reason);
+  }
+  return { translated: translated.trim(), detected: null };
+}
+
+/* 🆕 등록된 여러 키를 라운드로빈으로 돌려쓰는 래퍼. 한 키가 실패(쿼터 초과 429, 키 오류 등)하면
+   같은 요청 안에서 다음 키로 자동 재시도하고, 성공한 다음 호출은 그 다음 키부터 시작해 부하를
+   분산시킨다. 등록된 키가 모두 실패해야 예외를 던지고, 그건 상위 gtranslateRaw가 잡아서
+   기존 구글 무료 엔드포인트로 폴백한다. */
+async function gtranslateRawGemini(text, sl, tl, kind){
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error('등록된 Gemini API 키가 없습니다.');
+  const startIdx = geminiKeyRRIndex % keys.length;
+  let lastErr = null;
+  for (let i = 0; i < keys.length; i++){
+    const idx = (startIdx + i) % keys.length;
+    try {
+      const result = await gtranslateRawGeminiWithKey(text, sl, tl, keys[idx], kind);
+      geminiKeyRRIndex = (idx + 1) % keys.length;
+      return result;
+    } catch (e){
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('모든 Gemini API 키 호출 실패');
+}
+
+async function ensureNewEndpointProbed(){
+  if (newEndpointStatus !== null) return newEndpointStatus;
+  if (!newEndpointProbePromise){
+    newEndpointProbePromise = (async () => {
+      try {
+        const r = await gtranslateRawNew('Hello', 'en', 'ko');
+        newEndpointStatus = !!(r && typeof r.translated === 'string' && r.translated.trim().length > 0);
+      } catch (e){
+        newEndpointStatus = false;
+      }
+      if (typeof onNewEndpointProbed === 'function') onNewEndpointProbed(newEndpointStatus);
+      return newEndpointStatus;
+    })();
+  }
+  return newEndpointProbePromise;
+}
+
+async function gtranslateRaw(text, sl, tl, kind){
+  text = stripNonPrintable(text);
+  if (advancedOpts.useGeminiApi && getGeminiKeys().length){
+    try {
+      return await gtranslateRawGemini(text, sl, tl, kind);
+    } catch (e){
+      // Gemini 호출 실패(키 오류/네트워크/빈 응답 등)는 이 요청만 기존 구글 번역으로
+      // 조용히 폴백한다 — 세션 전체를 막지 않고 번역이 계속 진행되게 함.
+    }
+  }
+  if (advancedOpts.useNewGoogleEndpoint !== false){
+    const ok = await ensureNewEndpointProbed();
+    if (ok){
+      try {
+        return await gtranslateRawNew(text, sl, tl);
+      } catch (e){
+        // 개별 요청 하나의 일시적 실패일 수 있으므로, 세션 전체를 즉시 구버전으로
+        // 못박지 않고 이번 호출만 구버전으로 폴백한다(프로브에서 이미 통과했으므로
+        // 반복 실패가 잦으면 사실상 매번 폴백 왕복이 생기지만, 안전이 우선).
+      }
+    }
+  }
+  return gtranslateRawOld(text, sl, tl);
+}
+
+/* ---- 마커 기반 정렬: 언어쌍에 따라 어떤 특수문자가 구글 번역을 통과하며
+   살아남는지가 다르기 때문에(한 마커가 특정 언어쌍에서는 사라지거나
+   숫자가 단어로 번역돼버릴 수 있음), 여러 후보를 순서대로 시도해서
+   실제로 개수가 맞게 살아남는 마커를 채택한다. ---- */
+const ANCHOR_CANDIDATES = ['\u2016', '@@', '###', '%%%', '|||'];
+function buildMarkedText(blocks, anchor){
+  return blocks.map((b,i)=> `${anchor}${i}${anchor} ${b.text.replace(/\n+/g,' ').trim()}`).join('  ');
+}
+function parseMarkedText(translated, count, anchor){
+  const escaped = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(escaped+'\\s*(\\d+)\\s*'+escaped,'g');
+  const marks = [...translated.matchAll(re)];
+  if (marks.length !== count) return null;
+  const result = new Array(count);
+  for (let i=0;i<marks.length;i++){
+    const idx = parseInt(marks[i][1],10);
+    if (!Number.isInteger(idx) || idx<0 || idx>=count) return null;
+    const start = marks[i].index + marks[i][0].length;
+    const end = i+1<marks.length ? marks[i+1].index : translated.length;
+    result[idx] = translated.slice(start,end).trim();
+  }
+  for (let i=0;i<count;i++){ if (result[i]===undefined) return null; }
+  return result;
+}
+/* 여러 마커 후보를 순서대로 시도. 첫 chunk에서 성공한 마커는 캐시해서
+   같은 언어쌍 내에서는 매번 재시도하지 않고 바로 그 마커부터 쓴다. */
+const workingAnchorByPair = {};
+async function translateWindowMarked(windowBlocks, sourceLang, targetLang){
+  const pairKey = sourceLang+'>'+targetLang;
+  const tryOrder = workingAnchorByPair[pairKey]
+    ? [workingAnchorByPair[pairKey], ...ANCHOR_CANDIDATES.filter(a=>a!==workingAnchorByPair[pairKey])]
+    : ANCHOR_CANDIDATES;
+  for (const anchor of tryOrder){
+    try{
+      const marked = buildMarkedText(windowBlocks, anchor);
+      if (marked.length > SAFE_LEN) return null; // 너무 길면 마커 방식 포기 → 개별 폴백(gtranslateSafe)이 안전하게 분할 처리
+      const { translated, detected } = await gtranslateRaw(marked, sourceLang, targetLang, 'subtitle');
+      const parsed = parseMarkedText(translated, windowBlocks.length, anchor);
+      if (parsed){
+        workingAnchorByPair[pairKey] = anchor;
+        return { parsed, detected };
+      }
+    } catch(e){ /* try next anchor */ }
+  }
+  return null;
+}
+
+/* ---- 문장경계 인식 청킹: 목표 블록 수에 도달한 뒤 문장이 끝나는 지점에서
+   자른다. 단, 자막처럼 짧은 블록이 아니라 epub/txt처럼 문단 하나가 긴
+   경우를 대비해 총 글자수 상한(maxChars)도 함께 건다 — 안 그러면 구글
+   무료 엔드포인트가 감당 못 할 만큼 긴 요청이 나가서 매번 실패→개별
+   폴백으로 새며, 문맥 효과 없이 느려지기만 한다. ---- */
+function chunkBlocksSmart(blocks, targetSize, maxSize, maxChars){
+  maxChars = maxChars || 1800;
+  const endsSentence = t => /[.!?…"'”)\]]\s*$/.test(t.trim());
+  const chunks = []; let cur = []; let curChars = 0;
+  for (let i=0;i<blocks.length;i++){
+    const b = blocks[i];
+    const len = b.text.length;
+    // 이미 담긴 게 있는데 이 블록까지 더하면 글자수 상한을 넘는다면, 먼저 지금까지를 마감
+    if (cur.length && (curChars + len > maxChars)){
+      chunks.push(cur); cur = []; curChars = 0;
+    }
+    cur.push(b); curChars += len;
+    const hitTarget = cur.length>=targetSize && endsSentence(b.text);
+    const hitCap = cur.length>=maxSize || curChars>=maxChars;
+    if (hitTarget || hitCap){
+      chunks.push(cur); cur=[]; curChars=0;
+    }
+  }
+  if (cur.length) chunks.push(cur);
+  return chunks;
+}
+
+/* ---- 용어 고정(글로서리) v2 — 캘리버 글로서리 참고해서 3가지 문법 지원:
+   1) 제외:      "원문"                → 번역하지 말고 원문 그대로 보존(고유명사·코드명 등)
+   2) 강제치환:  "원문=번역"            → 기존과 동일
+   3) 정규식:    "/패턴/플래그=번역"    → 어미 활용이 있는 언어 대응(플래그 생략 가능)
+                 "/패턴/플래그"        → 정규식 매치를 제외 처리
+   기존엔 번역이 끝난 뒤 결과 문자열에서 find/replace만 했는데, 그러면 구글이 그 용어를
+   아예 다르게 음역해버린 경우(세묜/세면처럼 매번 다르게 나오는 문제, 6장 참고)를 못 잡는다.
+   그래서 이제는 번역 전에 원문에서 해당 용어를 플레이스홀더(◆GL0◆ 형식)로 바꿔서 보내고
+   (구글이 그 부분은 아예 못 건드리게), 번역 후 플레이스홀더가 개수까지 정확히 살아남았을
+   때만 원하는 값으로 복원한다(protectGlossary/restoreGlossary). 플레이스홀더가 깨지거나
+   사라지면(구글이 이번엔 이 토큰을 못 살렸다는 뜻) 안전하게 예전 방식(번역 후 원문 그대로
+   find/replace, applyGlossary)으로 그 블록만 폴백해서 최소한 이전보다 나빠지지는 않는다. ---- */
+function parseGlossary(text){
+  if (!text) return [];
+  return text.split('\n').map(line=>{
+    line = line.trim();
+    if (!line || line.startsWith('#')) return null;
+    const regexMatch = line.match(/^\/(.+)\/([a-z]*)(?:=(.*))?$/);
+    if (regexMatch){
+      let re;
+      try{
+        const flags = regexMatch[2].includes('g') ? regexMatch[2] : regexMatch[2]+'g';
+        re = new RegExp(regexMatch[1], flags);
+      } catch(e){ return null; } // 잘못된 정규식은 조용히 무시
+      const hasTo = regexMatch[3]!==undefined && regexMatch[3].trim()!=='';
+      return { type:'regex', re, to: hasTo ? regexMatch[3].trim() : null, weight: regexMatch[1].length };
+    }
+    const idx = line.indexOf('=');
+    if (idx<0) return { type:'exclude', from: line, weight: line.length };
+    const from = line.slice(0,idx).trim();
+    const to = line.slice(idx+1).trim();
+    if (!from || !to) return null;
+    return { type:'force', from, to, weight: from.length };
+  }).filter(Boolean).sort((a,b)=> b.weight - a.weight); // 긴/구체적인 표현부터 매치해야 부분일치 충돌이 없음
+}
+
+/* 텍스트 안에서 글로서리 항목들이 실제로 매치되는 구간을 찾는다(서로 겹치지 않게, 앞선 매치 우선). */
+function findGlossaryMatches(text, pairs){
+  const taken = [];
+  const overlaps = (s,e) => taken.some(([ts,te]) => s<te && e>ts);
+  const matches = [];
+  for (const p of pairs){
+    if (p.type==='regex'){
+      p.re.lastIndex = 0;
+      let m;
+      while ((m = p.re.exec(text))){
+        const s = m.index, e = s+m[0].length;
+        if (e>s && !overlaps(s,e)){
+          matches.push({ start:s, end:e, restore: p.to===null ? m[0] : p.to });
+          taken.push([s,e]);
+        }
+        if (p.re.lastIndex===m.index) p.re.lastIndex++; // 빈 매치 무한루프 방지
+      }
+    } else {
+      let idx = text.indexOf(p.from);
+      while (idx!==-1){
+        const s = idx, e = idx+p.from.length;
+        if (!overlaps(s,e)){
+          matches.push({ start:s, end:e, restore: p.type==='exclude' ? p.from : p.to });
+          taken.push([s,e]);
+        }
+        idx = text.indexOf(p.from, idx+p.from.length);
+      }
+    }
+  }
+  matches.sort((a,b)=>a.start-b.start);
+  return matches;
+}
+const GLOSS_TOKEN = i => `\u25C6GL${i}\u25C6`; // ◆GL0◆ — 숫자+ASCII라 구글이 대체로 안 건드림
+function protectGlossary(text, pairs){
+  if (!pairs || !pairs.length) return { protectedText: text, restores: [] };
+  const matches = findGlossaryMatches(text, pairs);
+  if (!matches.length) return { protectedText: text, restores: [] };
+  let out = ''; let last = 0; const restores = [];
+  matches.forEach((m,i) => {
+    out += text.slice(last, m.start) + GLOSS_TOKEN(i);
+    restores.push(m.restore);
+    last = m.end;
+  });
+  out += text.slice(last);
+  return { protectedText: out, restores };
+}
+const GLOSS_TOKEN_RE = /\u25C6GL(\d+)\u25C6/g;
+function restoreGlossary(translated, restores){
+  if (!restores || !restores.length) return { text: translated, ok: true };
+  GLOSS_TOKEN_RE.lastIndex = 0;
+  const found = [...translated.matchAll(GLOSS_TOKEN_RE)];
+  if (found.length !== restores.length) return { text: translated, ok: false };
+  let out = translated;
+  for (let i=found.length-1;i>=0;i--){ // 뒤에서부터 치환해야 앞쪽 인덱스가 안 밀림
+    const idx = parseInt(found[i][1],10);
+    if (!Number.isInteger(idx) || idx<0 || idx>=restores.length) return { text: translated, ok:false };
+    out = out.slice(0, found[i].index) + restores[idx] + out.slice(found[i].index+found[i][0].length);
+  }
+  return { text: out, ok: true };
+}
+/* 레거시 폴백: 보호 방식이 실패했을 때만 쓰는 예전 방식(번역 후 원문 그대로 find/replace).
+   exclude/regex는 번역 결과에서 원문 형태를 찾을 수 있다는 보장이 없어 폴백 대상에서 뺀다. */
+function applyGlossaryLegacy(text, pairs){
+  const forcePairs = (pairs||[]).filter(p=>p.type==='force');
+  if (!text || !forcePairs.length) return text;
+  let out = text;
+  for (const { from, to } of forcePairs) out = out.split(from).join(to);
+  return out;
+}
+const GLOSS_TOKEN_LEFTOVER_RE = /\u25C6GL\d+\u25C6/g;
+/* restoreGlossary가 실패하면(플레이스홀더 개수가 안 맞으면) applyGlossaryLegacy로 폴백하는데,
+   그 폴백 결과에는 구글이 망가뜨린 플레이스홀더(◆GL0◆ 등)가 텍스트 안에 그대로 남아있을 수 있다.
+   사용자에게 "◆GL0◆" 같은 정체불명 토큰이 그대로 보이는 것보다는, 그 자리를 비워서라도(용어
+   고정은 이번엔 못 지켰다는 뜻) 읽을 수 있는 문장으로 만드는 게 낫다고 판단해 제거한다. */
+function finalizeGlossary(rawTranslated, restores, gloss){
+  const restored = restoreGlossary(rawTranslated, restores);
+  if (restored.ok) return { text: restored.text, ok: true };
+  const fallback = applyGlossaryLegacy(rawTranslated, gloss)
+    .replace(GLOSS_TOKEN_LEFTOVER_RE, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+  return { text: fallback, ok: false };
+}
+
+/* ---- 🆕 4) 번역 캐시 영속화(IndexedDB) — 캘리버가 "요청 실패/중단 후 다시 번역할 필요
+   없이 결과를 캐싱"하는 것과 같은 목적. 세션이 끝나도(탭을 닫아도) 브라우저에 남아있어서,
+   같은 파일을 다시 돌리거나 중간에 실패해도 이미 번역된 문장은 구글에 다시 묻지 않는다.
+   키는 언어쌍+용어고정 조합까지 포함해서 만든다(글로서리가 다르면 최종 결과가 달라지므로,
+   다른 글로서리로 만든 캐시를 잘못 재사용하지 않게). IndexedDB를 못 쓰는 환경(구형 브라우저,
+   Node 테스트 등)에서는 openCacheDB가 null을 반환하고, 이후 모든 캐시 함수가 조용히
+   no-op으로 동작해서 캐시 없이도 앱은 정상 작동한다(치명적이지 않은 기능이라 실패해도 무시). ---- */
+const CACHE_DB_NAME = 'translatorCacheDB_v1';
+const CACHE_STORE = 'translations';
+let _cacheDBPromise = null;
+function openCacheDB(){
+  if (_cacheDBPromise) return _cacheDBPromise;
+  _cacheDBPromise = new Promise((resolve) => {
+    if (typeof indexedDB === 'undefined'){ resolve(null); return; }
+    try{
+      const req = indexedDB.open(CACHE_DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(CACHE_STORE); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch(e){ resolve(null); }
+  });
+  return _cacheDBPromise;
+}
+function glossarySignature(pairs){
+  if (!pairs || !pairs.length) return '';
+  return pairs.map(p => `${p.type}:${p.from || (p.re?p.re.source:'')}:${p.to||''}`).sort().join('|');
+}
+function cacheKey(sourceLang, targetLang, text, gloss){
+  return `${sourceLang}>${targetLang}::${glossarySignature(gloss)}::${text}`;
+}
+/* 여러 키를 한 트랜잭션으로 한 번에 조회(요청마다 트랜잭션을 열면 블록 수가 많을 때 느림) */
+async function cacheGetMany(keys){
+  const result = new Map();
+  const db = await openCacheDB();
+  if (!db || !keys.length) return result;
+  return new Promise(resolve => {
+    try{
+      const tx = db.transaction(CACHE_STORE, 'readonly');
+      const store = tx.objectStore(CACHE_STORE);
+      let remaining = keys.length;
+      keys.forEach(k => {
+        const req = store.get(k);
+        req.onsuccess = () => { if (req.result!==undefined) result.set(k, req.result); if(--remaining===0) resolve(result); };
+        req.onerror = () => { if(--remaining===0) resolve(result); };
+      });
+      tx.onerror = () => resolve(result);
+    } catch(e){ resolve(result); }
+  });
+}
+async function cacheSetMany(entries){ // [[key, value], ...]
+  const db = await openCacheDB();
+  if (!db || !entries.length) return;
+  try{
+    const tx = db.transaction(CACHE_STORE, 'readwrite');
+    const store = tx.objectStore(CACHE_STORE);
+    entries.forEach(([k,v]) => store.put(v,k));
+  } catch(e){ /* 캐시 쓰기 실패는 무시 — 캐시는 있으면 좋은 기능이지 필수 기능이 아님 */ }
+}
+async function cacheClear(){
+  const db = await openCacheDB();
+  if (!db) return;
+  try{
+    const tx = db.transaction(CACHE_STORE, 'readwrite');
+    tx.objectStore(CACHE_STORE).clear();
+  } catch(e){}
+}
+
+/* 🆕 이번 대화: '합니다체' → '하다체' 실험적 후처리 (advancedOpts.narrativeStyle, 문서 전용)
+   왜 필요한가: 구글 번역은 소설처럼 원문이 평서체(예: 러시아어 서술형 과거)여도 한국어로는
+   거의 항상 정중체(합니다/습니다)로 뽑아낸다. 이건 마커/문맥 로직의 버그가 아니라 구글 번역
+   엔진 자체의 대상언어 스타일 경향으로 보임 (사용자 피드백으로 확인, 6장 참고).
+   ⚠️ 한계: 한국어에서 "습니다체→다체" 변환은 동사 활용에 따라 규칙이 달라서(예: 현재형 동사는
+   "갑니다"→"간다"처럼 어간이 바뀌어야 하는데, 이는 형태소 분석 없이는 정확히 못 함) 일반 정규식으로
+   전부 처리할 수 없다. 그래서 "실수해도 안전한" 패턴만 골라 변환한다:
+     1) 과거형: "습니다" 바로 앞 글자의 받침이 'ㅆ'이면(웃었습니다/갔습니다/했습니다/됐습니다처럼
+        축약형·비축약형 모두 어간이 이미 과거형을 담고 있으므로) 그 글자는 그대로 두고 "습니다"만 "다"로.
+        유니코드 한글 완성형 코드포인트에서 받침(종성) 인덱스가 20(ㅆ)인지로 판별한다.
+     2) 없습니다/같습니다 → 없다/같다 (어간이 안 바뀌는 형용사류라 안전. '있습니다'는 1)에서 이미 처리됨)
+     3) 계사: 입니다/아닙니다 → 이다/아니다
+   현재형 일반 동사(예: "갑니다", "봅니다")는 다루지 못해 그대로 합니다체로 남는다 — 부분 개선. */
+function endsWithSsBatchim(ch){
+  const code = ch.charCodeAt(0) - 0xAC00;
+  if (code < 0 || code > 11171) return false;
+  return (code % 28) === 20; // 종성 인덱스 20 = ㅆ
+}
+function tryNarrativeStyle(text){
+  if (!text) return text;
+  let out = text.replace(/([가-힣])습니다/g, (m, ch) => endsWithSsBatchim(ch) ? ch + '다' : m);
+  out = out.replace(/(없|같)습니다/g, '$1다');
+  out = out.replace(/아닙니다/g, '아니다');
+  out = out.replace(/입니다/g, '이다');
+  return out;
+}
+
+/* ---- 분할 오류 감지: 문장이 다음/이전 자막 큐로 잘못 통째로 쏠려서
+   이 블록의 번역 결과가 사실상 비어있거나 부호만 남는 경우를 잡아낸다.
+   (러시아어 종속절이 여러 큐에 걸쳐 나뉘어 있을 때, 한국어 어순 재배열 때문에
+   특정 큐가 텅 비어버리는 경우가 생김) ---- */
+function isSuspectTranslation(orig, tr){
+  if (tr===undefined || tr===null) return true;
+  const stripped = String(tr).replace(/[\s.!?…"'“”'`\-,;:·]/g,'');
+  if (stripped.length===0) return true;
+  const origStripped = orig.replace(/[\s.!?…"'“”'`\-,;:·]/g,'');
+  if (origStripped.length>=6 && stripped.length < Math.max(2, origStripped.length*0.15)) return true;
+  return false;
+}
+
+/* 🆕 문서 전용 개별 문단 번역(translateBlocksIndividual)에서만 쓰는 가벼운 검증.
+   isSuspectTranslation의 "원문 대비 지나치게 짧음" 판정은 옆 블록으로 내용이
+   쏠리는 분할오류(마커/청킹 방식 전용 문제)를 잡기 위한 것이라, 문단을 하나씩
+   따로 보내는 개별 모드에는 "옆 블록"이라는 개념 자체가 없어 해당되지 않는다.
+   "짧은 문단이 짧게 번역됨"은 정상이므로 길이 비교는 하지 않고, 완전히 빈 값이나
+   부호만 남은 경우(네트워크 일시 오류 등)만 재시도 대상으로 본다. */
+function isEmptyTranslation(tr){
+  if (tr===undefined || tr===null) return true;
+  const stripped = String(tr).replace(/[\s.!?…"'“”'`\-,;:·]/g,'');
+  return stripped.length===0;
+}
+
+/* ---- 포맷별 청킹 프로파일: 자막(짧은 큐가 아주 많음)과 문서(문단이 길고
+   그 자체로 문맥이 이미 충분함)는 최적 파라미터가 달라서 기본값을 분리한다.
+   사용자가 "고급 옵션"에서 값을 지정하면 그 값이 프로파일 기본값을 덮어쓴다. ---- */
+const CHUNK_PROFILES = {
+  subtitle: { targetSize:12, maxSize:20, maxChars:900,  contextBefore:2, contextAfter:1, concurrency:4 },
+  document: { targetSize:3,  maxSize:6,  maxChars:1800, contextBefore:1, contextAfter:0, concurrency:4 }
+};
+function profileTypeForExt(ext){
+  return (ext==='srt' || ext==='vtt') ? 'subtitle' : 'document';
+}
+function resolveChunkOpts(ext, overrides){
+  const base = CHUNK_PROFILES[profileTypeForExt(ext)];
+  const o = overrides || {};
+  return {
+    targetSize:   o.targetSize   != null ? o.targetSize   : base.targetSize,
+    maxSize:      o.maxSize      != null ? o.maxSize      : base.maxSize,
+    maxChars:     o.maxChars     != null ? o.maxChars     : base.maxChars,
+    contextBefore:o.contextBefore!= null ? o.contextBefore: base.contextBefore,
+    contextAfter: o.contextAfter != null ? o.contextAfter : base.contextAfter,
+    concurrency:  o.concurrency  != null ? o.concurrency  : base.concurrency
+  };
+}
+
+async function translateBlocks(blocks, sourceLang, targetLang, onProgress, chunkOpts, glossaryPairs, useCache){
+  const translations = {};
+  let detectedSource = null;
+  if (!blocks.length) return { translations, detectedSource };
+  const opts = chunkOpts || CHUNK_PROFILES.subtitle;
+  const gloss = glossaryPairs || [];
+  const cacheOn = useCache!==false;
+
+  // 완전히 동일한 원문 줄(반복 대사, 감탄사 등)은 한 번만 번역하고 재사용
+  const textCache = new Map(); // text -> translated(최종, 글로서리 복원까지 끝난 값)
+
+  let done = 0;
+  const total = blocks.length;
+  const bump = n => { done += n; onProgress && onProgress(done, total); };
+
+  // 🆕 4) 영속 캐시(IndexedDB)에서 이미 번역된 블록은 먼저 채워넣고, 나머지만 실제 번역 대상으로 좁힌다.
+  //    문맥 윈도우는 "번역이 필요한 블록들" 기준으로 다시 짜여지므로, 캐시에 있던 블록은 옆 블록의
+  //    문맥 재료로는 더 이상 쓰이지 않는다(반복되는 짧은 대사가 캐시 히트되는 경우가 많아 영향 적음).
+  const newCacheEntries = []; // [[key, finalText], ...] — 끝나고 한 번에 저장
+  let pending = blocks;
+  if (cacheOn){
+    const keyOf = b => cacheKey(sourceLang, targetLang, b.text, gloss);
+    const hits = await cacheGetMany(blocks.map(keyOf));
+    pending = [];
+    for (const b of blocks){
+      const hit = hits.get(keyOf(b));
+      if (hit!==undefined){ translations[b.id]=hit; textCache.set(b.text,hit); bump(1); }
+      else pending.push(b);
+    }
+  }
+  if (!pending.length) return { translations, detectedSource };
+
+  const chunks = chunkBlocksSmart(pending, opts.targetSize, opts.maxSize, opts.maxChars);
+  const CONTEXT_BEFORE = opts.contextBefore, CONTEXT_AFTER = opts.contextAfter; // 슬라이딩 윈도우: 앞뒤 문맥은 번역만 참고하고 결과는 버림
+
+  // 원문 b.text 하나를 안전하게(글로서리 보호 → 번역 → 복원) 개별 번역
+  async function translateOneSafe(b){
+    const { protectedText, restores } = protectGlossary(b.text, gloss);
+    const { translated, detected } = await gtranslateSafe(protectedText, sourceLang, targetLang, 'subtitle');
+    const { text: finalText } = finalizeGlossary(translated, restores, gloss);
+    return { text: finalText, detected };
+  }
+
+  async function processChunk(c){
+    const core = chunks[c];
+    const before = (c>0 && CONTEXT_BEFORE>0) ? chunks[c-1].slice(-CONTEXT_BEFORE) : [];
+    const after = (c<chunks.length-1 && CONTEXT_AFTER>0) ? chunks[c+1].slice(0,CONTEXT_AFTER) : [];
+    const windowBlocks = [...before, ...core, ...after];
+
+    // 마커 텍스트로 합치기 전에 블록별로 글로서리 용어를 플레이스홀더로 보호
+    const protectedWindow = windowBlocks.map(b => {
+      const { protectedText, restores } = protectGlossary(b.text, gloss);
+      return { id: b.id, text: protectedText, _restores: restores };
+    });
+
+    const result = await translateWindowMarked(protectedWindow, sourceLang, targetLang);
+    if (result){
+      if (result.detected && !detectedSource) detectedSource = result.detected;
+      for (let i=0;i<core.length;i++){
+        const rawParsed = result.parsed[before.length+i];
+        const { text: t } = finalizeGlossary(rawParsed, protectedWindow[before.length+i]._restores, gloss);
+        translations[core[i].id] = t;
+        textCache.set(core[i].text, t);
+        if (cacheOn) newCacheEntries.push([cacheKey(sourceLang, targetLang, core[i].text, gloss), t]);
+      }
+      // 분할 오류 복구: 내용이 옆 큐로 쏠려 텅 비거나 조각만 남은 경우, 그 블록만
+      // 문맥 없이 단독으로 재번역해서 최소한 "빈 자막"은 나오지 않게 한다.
+      for (const b of core){
+        if (isSuspectTranslation(b.text, translations[b.id])){
+          try{
+            const { text, detected } = await translateOneSafe(b);
+            if (detected && !detectedSource) detectedSource = detected;
+            translations[b.id] = text;
+            textCache.set(b.text, text);
+            if (cacheOn) newCacheEntries.push([cacheKey(sourceLang, targetLang, b.text, gloss), text]);
+          } catch(e){ /* 실패하면 기존 값 유지 */ }
+        }
+      }
+      bump(core.length);
+      return;
+    }
+    // 폴백: 개별 번역, 단 캐시에 이미 있으면 재요청하지 않음
+    for (const b of core){
+      if (textCache.has(b.text)){ translations[b.id] = textCache.get(b.text); bump(1); continue; }
+      try{
+        const { text, detected } = await translateOneSafe(b);
+        if (detected && !detectedSource) detectedSource = detected;
+        translations[b.id] = text;
+        textCache.set(b.text, text);
+        if (cacheOn) newCacheEntries.push([cacheKey(sourceLang, targetLang, b.text, gloss), text]);
+      } catch(e){ translations[b.id] = b.text; }
+      bump(1);
+      await sleep(60);
+    }
+  }
+
+  // 동시성 제한 워커 풀: 청크들을 순서대로 꺼내되 opts.concurrency개씩 병렬 처리
+  let nextIndex = 0;
+  async function worker(){
+    while (nextIndex < chunks.length){
+      const c = nextIndex++;
+      await processChunk(c);
+      await sleep(80);
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(opts.concurrency||4, chunks.length)}, worker));
+
+  if (cacheOn && newCacheEntries.length) await cacheSetMany(newCacheEntries);
+
+  return { translations, detectedSource };
+}
+
+/* 🆕 문서(EPUB/FB2/TXT) 전용: 캘리버 Ebook Translator 플러그인의 기본 동작(병합 옵션이
+   꺼진 상태 = 문단 하나마다 번역 요청을 따로 보냄)과 동일한 방식으로 번역한다.
+   - 마커(‖0‖ 등) 삽입/파싱이 아예 없음 → 마커가 언어쌍에 따라 숫자/기호로 오인식되거나
+     구글이 마커 주변 어순을 재배열하면서 경계가 밀려 이웃 문단 단어가 섞여드는 경로 자체가 없음.
+   - "문맥용으로 옆 블록을 같이 보내고 버리는" 슬라이딩 윈도우도 없음 → 문서는 한 문단 자체가
+     이미 완결된 문맥이라는 전제(4-2 CHUNK_PROFILES.document 설계 의도)와 더 잘 맞고, 문맥 블록의
+     번역이 core 블록 해석에 영향을 주고서 버려지는 부작용(7-1 대명사 생략 가설과 연결된 지점)도 없음.
+   - 동일 원문 캐싱(textCache)은 그대로 유지 — 반복 문구(장 제목, 후렴구 등) 낭비 요청 방지.
+   - 분할 오류 복구(isSuspectTranslation)는 "옆 청크로 내용이 쏠리는" 문제를 잡기 위한 것이라
+     애초에 청크 자체가 없는 이 모드에는 적용 대상이 아님. 대신 완전히 빈 값/부호만 남는 경우만
+     한 번 재시도하는 훨씬 가벼운 isEmptyTranslation을 씀(네트워크 일시 오류 등 대비).
+   - 자막(SRT/VTT)은 대사가 짧아 문맥이 부족한 게 핵심 문제라 기존 마커+윈도우 방식(translateBlocks)을
+     그대로 씀 — 이 함수는 문서 포맷에서만 호출된다.
+   - 🆕 글로서리(용어 고정)도 번역 전에 protectGlossary로 플레이스홀더 보호 → 번역 → finalizeGlossary로
+     복원하는 방식을 쓴다. 실패하면 그 블록만 레거시(번역 후 find/replace, 잔여 토큰 제거)로 폴백.
+   - 🆕 문단이 SAFE_LEN(1800자)을 넘으면 gtranslateSafe가 문장 경계에서 안전하게 나눠 보낸다.
+   - 🆕 영속 캐시(IndexedDB)에서 이미 번역된 문단은 네트워크 요청 없이 바로 채운다. */
+async function translateBlocksIndividual(blocks, sourceLang, targetLang, onProgress, concurrency, glossaryPairs, useCache){
+  const translations = {};
+  let detectedSource = null;
+  if (!blocks.length) return { translations, detectedSource };
+  const gloss = glossaryPairs || [];
+  const cacheOn = useCache!==false;
+
+  const textCache = new Map(); // text -> translated(최종, 글로서리 복원까지 끝난 값)
+  let done = 0;
+  const total = blocks.length;
+  const bump = () => { done += 1; onProgress && onProgress(done, total); };
+
+  const newCacheEntries = []; // [[key, finalText], ...] — 끝나고 한 번에 저장
+  let pending = blocks;
+  if (cacheOn){
+    const keyOf = b => cacheKey(sourceLang, targetLang, b.text, gloss);
+    const hits = await cacheGetMany(blocks.map(keyOf));
+    pending = [];
+    for (const b of blocks){
+      const hit = hits.get(keyOf(b));
+      if (hit!==undefined){ translations[b.id]=hit; textCache.set(b.text,hit); bump(); }
+      else pending.push(b);
+    }
+  }
+  if (!pending.length) return { translations, detectedSource };
+
+  let nextIndex = 0;
+  async function worker(){
+    while (nextIndex < pending.length){
+      const b = pending[nextIndex++];
+      if (textCache.has(b.text)){
+        translations[b.id] = textCache.get(b.text);
+        bump();
+        continue;
+      }
+      try{
+        const { protectedText, restores } = protectGlossary(b.text, gloss);
+        const { translated, detected } = await gtranslateSafe(protectedText, sourceLang, targetLang, 'document');
+        let raw = translated;
+        if (isEmptyTranslation(raw)){
+          // 완전히 빈 값이면 네트워크 일시 오류일 수 있으니 한 번만 더 시도
+          try{
+            const retry = await gtranslateSafe(protectedText, sourceLang, targetLang, 'document');
+            if (!isEmptyTranslation(retry.translated)) raw = retry.translated;
+          } catch(e){ /* 재시도 실패 시 원래 결과(빈 값이어도) 유지 */ }
+        }
+        const { text: t } = finalizeGlossary(raw, restores, gloss);
+        if (detected && !detectedSource) detectedSource = detected;
+        translations[b.id] = t;
+        textCache.set(b.text, t);
+        if (cacheOn) newCacheEntries.push([cacheKey(sourceLang, targetLang, b.text, gloss), t]);
+      } catch(e){
+        translations[b.id] = b.text; // 요청 자체가 실패하면 원문 유지(빈 문단으로 안 날아가게)
+      }
+      bump();
+      await sleep(60);
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(concurrency||4, pending.length)}, worker));
+
+  if (cacheOn && newCacheEntries.length) await cacheSetMany(newCacheEntries);
+
+  return { translations, detectedSource };
+}
+
+/* ================= Run pipeline ================= */
+function setStatus(msg){ document.getElementById('statusLine').textContent = msg; }
+function setProgress(pct){ document.getElementById('progressFill').style.width = pct+'%'; }
+function appendLog(msg){
+  const log = document.getElementById('log');
+  const time = new Date().toLocaleTimeString('ko-KR', {hour12:false});
+  log.textContent += `\n[${time}] ${msg}`;
+  log.scrollTop = log.scrollHeight;
+}
+function clearLog(){ document.getElementById('log').textContent = '시작합니다...'; }
+/* 여러 파일/언어 조합을 한 번에 돌릴 때, 어떤 작업이 대기 중/진행 중/완료/실패인지
+   한눈에 보여주는 목록. runTranslation이 각 작업의 상태를 바꿀 때마다 다시 그린다. */
+function renderJobList(jobs){
+  const el = document.getElementById('jobList');
+  if (!jobs || !jobs.length){ el.innerHTML = ''; return; }
+  const doneCount = jobs.filter(j=>j.status==='done').length;
+  const errCount = jobs.filter(j=>j.status==='error').length;
+  const icons = { pending:'⏳', running:'🔄', done:'✅', error:'❌' };
+  const summary = `<div class="job-summary">진행 ${doneCount+errCount}/${jobs.length} · 성공 ${doneCount} · 실패 ${errCount}</div>`;
+  const rows = jobs.map(j=>
+    `<div class="job-item job-${j.status}"><span class="job-icon">${icons[j.status]||'⏳'}</span><span class="job-label">${escapeHtml(j.label)}</span></div>`
+  ).join('');
+  el.innerHTML = summary + rows;
+}
+function renderResultsList(items){
+  const el = document.getElementById('results');
+  el.innerHTML = '';
+  items.forEach(r=>{
+    const div = document.createElement('div');
+    div.className = 'result-item';
+    div.innerHTML = `<span class="rname">${escapeHtml(r.name)}</span><a href="${r.url}" download="${escapeHtml(r.name)}">다운로드</a>`;
+    el.appendChild(div);
+  });
+}
+
+document.getElementById('startBtn').addEventListener('click', ()=> runTranslation(uploadedFiles));
+
+async function runTranslation(files){
+  if (!files.length){ alert('먼저 파일을 업로드해주세요.'); return; }
+  const missingSlots = files.filter(f=>!f.slots.length);
+  if (missingSlots.length){ alert('번역 언어 슬롯이 없는 파일이 있습니다.'); return; }
+
+  const startBtn = document.getElementById('startBtn');
+  startBtn.disabled = true;
+  clearLog();
+  setProgress(0);
+  const resultItems = [];
+  renderResultsList(resultItems);
+
+  // 파일×언어슬롯 조합 하나하나를 "작업(job)"으로 미리 나열해서, 여러 개를 한 번에 돌릴 때
+  // 뭐가 끝났고 뭐가 남았는지 실시간으로 보여준다 (대기/진행중/완료/실패).
+  const jobs = [];
+  files.forEach(file=> file.slots.forEach(slot=>{
+    jobs.push({ file, slot, label: `${file.name} → [${langName(slot.target)}]`, status:'pending' });
+  }));
+  renderJobList(jobs);
+
+  const totalJobs = jobs.length;
+  let jobIndex = 0;
+  let jobPtr = 0;
+  const zip = new JSZip();
+
+  for (const file of files){
+    let parsed;
+    try{ parsed = await parseFile(file); }
+    catch(e){
+      appendLog(`❌ ${file.name} 파싱 실패: ${e.message}`);
+      for (let k=0;k<file.slots.length;k++){ jobs[jobPtr+k].status = 'error'; }
+      jobPtr += file.slots.length;
+      jobIndex += file.slots.length;
+      setProgress(Math.round(jobIndex/totalJobs*100));
+      renderJobList(jobs);
+      continue;
+    }
+    if (!parsed.blocks.length){ appendLog(`⚠️ ${file.name}: 번역할 텍스트 블록을 찾지 못했습니다.`); }
+
+    // 🆕 여러 언어를 한 파일에 합치기 모드: 슬롯이 2개 이상이고 토글이 켜져 있으면
+    // 슬롯별로 번역만 각각 수행하고, 파일별 출력은 마지막에 한 번만 만든다.
+    const mergeMode = !!(file.mergeLangs && file.slots.length > 1);
+    const slotResults = []; // mergeMode에서만 사용: [{target, translations}, ...] 슬롯 순서대로
+
+    for (const slot of file.slots){
+      const job = jobs[jobPtr++];
+      const tag = job.label;
+      job.status = 'running';
+      renderJobList(jobs);
+      setStatus(`${tag} 번역 준비 중...`);
+      try{
+        const chunkOpts = resolveChunkOpts(file.ext, advancedOpts.enabled ? advancedOpts : null);
+        const glossaryPairs = parseGlossary(slot.glossary);
+        // 🆕 문서(EPUB/FB2/TXT)는 캘리버 기본값과 동일하게 문단 하나씩 개별 번역(마커/문맥윈도우 없음).
+        // 자막(SRT/VTT)은 대사가 짧아 문맥 보강이 필요하므로 기존 마커+슬라이딩 윈도우 방식을 그대로 씀.
+        // 🆕 글로서리는 이제 번역 전에 플레이스홀더로 보호했다가 번역 후 복원하는 방식이라(protectGlossary/
+        // restoreGlossary), 각 번역 함수 안에서 블록 단위로 처리한다 — 여기서 사후 일괄 find/replace는 더 안 함.
+        const isDocFormat = profileTypeForExt(file.ext)==='document';
+        // 🆕 4) 캐시 사용 여부는 고급옵션 패널의 토글(기본 켜짐)을 그대로 따른다.
+        const useCache = advancedOpts.cacheEnabled!==false;
+        const { translations } = isDocFormat
+          ? await translateBlocksIndividual(parsed.blocks, slot.source, slot.target, (d,t)=> setStatus(`${tag} 진행: ${d}/${t}`), chunkOpts.concurrency, glossaryPairs, useCache)
+          : await translateBlocks(parsed.blocks, slot.source, slot.target, (d,t)=> setStatus(`${tag} 진행: ${d}/${t}`), chunkOpts, glossaryPairs, useCache);
+        // 🆕 실험적 서술체 후처리: 문서 프로파일 + 한국어 타겟 + 토글 켜짐일 때만 적용
+        if (advancedOpts.narrativeStyle && slot.target==='ko' && profileTypeForExt(file.ext)==='document'){
+          Object.keys(translations).forEach(id=>{ translations[id] = tryNarrativeStyle(translations[id]); });
+        }
+
+        if (mergeMode){
+          // 합치기 모드에서는 개별 파일을 만들지 않고 번역 결과만 모아둔다.
+          slotResults.push({ target: slot.target, translations });
+          appendLog(`✅ ${tag} 번역 완료 (병합 대기 중)`);
+        } else {
+          const { content, isBinary } = await parsed.rebuild(translations, slot.position, file.fb2OutputFormat || 'epub');
+          const outExt = (file.ext === 'fb2') ? (file.fb2OutputFormat==='fb2' ? 'fb2' : 'epub') : file.ext;
+          const outName = `${file.outputBaseName}${file.addLangSuffix ? '_'+slot.target : ''}.${outExt}`;
+          zip.file(outName, content);
+          const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
+          const url = URL.createObjectURL(blobForLink);
+          resultItems.push({ name: outName, url });
+          appendLog(`✅ ${outName} 생성 완료 (${parsed.blocks.length}개 블록)`);
+        }
+        job.status = 'done';
+      } catch(e){
+        appendLog(`❌ ${tag} 번역 실패: ${e.message}`);
+        job.status = 'error';
+      }
+      jobIndex++;
+      setProgress(Math.round(jobIndex/totalJobs*100));
+      renderResultsList(resultItems);
+      renderJobList(jobs);
+    }
+
+    // 🆕 합치기 모드: 슬롯 번역이 전부 끝난 뒤, 원문+번역어들을 한 파일로 합쳐서 출력한다.
+    if (mergeMode && slotResults.length){
+      try{
+        const { content, isBinary } = await parsed.rebuildMulti(slotResults, file.fb2OutputFormat || 'epub');
+        const outExt = (file.ext === 'fb2') ? (file.fb2OutputFormat==='fb2' ? 'fb2' : 'epub') : file.ext;
+        const langsSuffix = slotResults.map(s=>s.target).join('_');
+        const outName = `${file.outputBaseName}${file.addLangSuffix ? '_'+langsSuffix : ''}.${outExt}`;
+        zip.file(outName, content);
+        const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
+        const url = URL.createObjectURL(blobForLink);
+        resultItems.push({ name: outName, url });
+        appendLog(`✅ ${outName} 생성 완료 (병합 파일, ${parsed.blocks.length}개 블록 × ${slotResults.length}개 언어)`);
+      } catch(e){
+        appendLog(`❌ ${file.name} 병합 파일 생성 실패: ${e.message}`);
+      }
+      renderResultsList(resultItems);
+    }
+  }
+
+  if (resultItems.length > 1){
+    setStatus('압축 파일 생성 중...');
+    try{
+      const finalBlob = await zip.generateAsync({type:'blob'});
+      const zipUrl = URL.createObjectURL(finalBlob);
+      resultItems.unshift({ name: '전체_번역결과.zip', url: zipUrl });
+      renderResultsList(resultItems);
+    } catch(e){ appendLog('❌ zip 생성 실패: '+e.message); }
+  }
+
+  setStatus(`완료: 총 ${resultItems.filter(r=>!r.name.includes('전체_번역결과')).length}개 파일 생성됨`);
+  setProgress(100);
+  startBtn.disabled = false;
+}
+</script>
+</body>
+</html>
