@@ -193,6 +193,16 @@
   .result-item .rname{ flex:1; font-family: var(--mono); font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .result-item a{ color: var(--accent2); text-decoration:none; font-size:11.5px; font-weight:600; }
   .result-item a:hover{ text-decoration:underline; }
+  .result-item.has-extra{ flex-wrap:wrap; }
+  .result-item .rbtn{ font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--accent2); cursor:pointer; font-family:var(--sans); }
+  .result-item .rbtn:hover{ border-color:var(--accent2); }
+  .result-item .rbtn.ok{ background:var(--accent2); color:#fff; border-color:var(--accent2); }
+  .result-item .rpreview{ flex-basis:100%; margin:4px 0 0; padding:8px 10px; max-height:220px; overflow:auto; white-space:pre-wrap; word-break:break-word; font-family:var(--mono); font-size:11.5px; line-height:1.55; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:7px; color:var(--text-dim); }
+  .paste-panel textarea{ width:100%; min-height:130px; resize:vertical; font-family:var(--mono); font-size:12px; line-height:1.55; }
+  .paste-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:8px; font-size:11px; color:var(--text-faint); }
+  .paste-grid label{ display:flex; flex-direction:column; gap:3px; }
+  .paste-btns{ display:flex; gap:6px; margin-top:8px; }
+  .paste-btns .btn{ flex:1; }
   .note{ font-size:11px; color: var(--text-faint); line-height:1.6; margin-top:14px; padding:9px 11px; background: rgba(201,106,31,0.05); border:1px solid var(--accent-dim); border-radius:8px; }
 </style>
 </head>
@@ -201,7 +211,7 @@
 
   <div class="app-header">
     <div class="brand">
-      <div class="eyebrow">SRT · VTT · TXT · EPUB · FB2</div>
+      <div class="eyebrow">SRT · VTT · TXT · MD · DOCX · EPUB · FB2</div>
       <h1>자막·문서 번역기</h1>
     </div>
     <div class="mobile-toggle">
@@ -230,9 +240,35 @@
       <div class="dropzone" id="dropzone">
         <div class="icon">📂</div>
         <div class="main">클릭하거나 파일을 끌어다 놓으세요</div>
-        <div class="hint">SRT · VTT · TXT · EPUB · FB2 (다중 선택 가능)</div>
+        <div class="hint">SRT · VTT · TXT · MD · DOCX · EPUB · FB2 (다중 선택 가능)</div>
       </div>
-      <input type="file" id="fileInput" multiple accept=".srt,.vtt,.txt,.epub,.fb2" />
+      <input type="file" id="fileInput" multiple accept=".srt,.vtt,.txt,.md,.markdown,.docx,.epub,.fb2" />
+
+      <details class="advanced-panel paste-panel" id="pastePanel" style="margin-top:10px; border:1px solid var(--border-soft); border-radius:10px; padding:8px 12px; background:var(--bg-card);">
+        <summary style="cursor:pointer; font-size:13px; font-weight:600;">📋 텍스트 직접 붙여넣어 번역</summary>
+        <div style="margin-top:8px;">
+          <textarea class="textinput" id="pasteInput" placeholder="번역할 텍스트(일반 글 또는 마크다운)를 여기에 붙여넣으세요." spellcheck="false"></textarea>
+          <div class="paste-grid">
+            <label>원문 언어<select id="pasteSource"></select></label>
+            <label>번역 언어<select id="pasteTarget"></select></label>
+            <label>출력 방식<select id="pastePosition">
+              <option value="replace">번역만</option>
+              <option value="below">원문 아래에 번역</option>
+              <option value="above">원문 위에 번역</option>
+            </select></label>
+            <label style="grid-column:1 / span 3;">형식<select id="pasteFormat">
+              <option value="auto">자동 판별 (마크다운 문법이 보이면 MD)</option>
+              <option value="txt">일반 텍스트 (TXT)</option>
+              <option value="md">마크다운 (MD)</option>
+            </select></label>
+          </div>
+          <div class="paste-btns">
+            <button type="button" class="btn btn-ghost" id="pasteAddBtn">목록에 추가</button>
+            <button type="button" class="btn btn-accent" id="pasteRunBtn">추가 후 바로 번역</button>
+          </div>
+          <div class="vocab-note" id="pasteNote">추가하면 일반 파일과 똑같이 업로드 목록에 들어가고, 번역이 끝나면 결과에서 「복사」 버튼으로 클립보드에 바로 복사할 수 있습니다. 마크다운은 코드블록·표·링크 주소·머리말 기호를 보존한 채 글만 번역합니다.</div>
+        </div>
+      </details>
 
       <div class="col-title" style="margin-top:6px;">업로드된 파일</div>
       <div id="fileBlockList"><div class="empty-note">아직 업로드된 파일이 없습니다.</div></div>
@@ -338,7 +374,8 @@ function escapeHtml(s){
 }
 function detectExt(name){
   const m = name.toLowerCase().match(/\.([a-z0-9]+)$/);
-  return m ? m[1] : '';
+  const e = m ? m[1] : '';
+  return (e==='markdown' || e==='mdown') ? 'md' : e;
 }
 
 const LANGS = [
@@ -641,10 +678,30 @@ dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('drag'));
 dropzone.addEventListener('drop', e=>{ e.preventDefault(); dropzone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
 fileInput.addEventListener('change', e=> handleFiles(e.target.files));
 
+const SUPPORTED_EXTS = ['srt','vtt','txt','md','docx','epub','fb2'];
+const BINARY_EXTS = ['epub','docx'];
+
+function registerFileItem(item){
+  uploadedFiles.push(item);
+  if (!selectedFileId) selectedFileId = item.id;
+  renderFileBlockList();
+  renderPreview();
+  renderSettings();
+  parseFile(item).then(parsed=>{
+    item.blocks = parsed.blocks;
+    renderFileBlockList();
+    if (selectedFileId===item.id) renderPreview();
+  }).catch(e=>{
+    item.parseError = e.message || '파싱 실패';
+    renderFileBlockList();
+    if (selectedFileId===item.id) renderPreview();
+  });
+}
+
 async function handleFiles(fileList){
   for (const f of Array.from(fileList)){
     const ext = detectExt(f.name);
-    if (!['srt','vtt','txt','epub','fb2'].includes(ext)){
+    if (!SUPPORTED_EXTS.includes(ext)){
       appendLog(`⚠️ 지원하지 않는 형식: ${f.name}`);
       continue;
     }
@@ -654,24 +711,54 @@ async function handleFiles(fileList){
       outputBaseName: baseName, addLangSuffix: true, fb2OutputFormat: 'epub', mergeLangs: false, slots: [newSlot()]
     };
     try{
-      item.raw = (ext === 'epub') ? await f.arrayBuffer() : await f.text();
+      item.raw = BINARY_EXTS.includes(ext) ? await f.arrayBuffer() : await f.text();
     } catch(e){ item.parseError = '파일을 읽을 수 없습니다'; }
-    uploadedFiles.push(item);
-    if (!selectedFileId) selectedFileId = item.id;
-    renderFileBlockList();
-    renderPreview();
-    renderSettings();
-    parseFile(item).then(parsed=>{
-      item.blocks = parsed.blocks;
-      renderFileBlockList();
-      if (selectedFileId===item.id) renderPreview();
-    }).catch(e=>{
-      item.parseError = e.message || '파싱 실패';
-      renderFileBlockList();
-      if (selectedFileId===item.id) renderPreview();
-    });
+    registerFileItem(item);
   }
 }
+
+/* ---- 텍스트 직접 붙여넣기: 붙여넣은 글을 가상의 .txt/.md 파일로 만들어 일반 파일과 같은 파이프라인에 태운다 ---- */
+function looksLikeMarkdown(text){
+  return /^(#{1,6}\s+\S|\s*[-*+]\s+\S|\s*\d+[.)]\s+\S|>\s?\S|```|~~~|\|.+\|\s*$)/m.test(text) || /\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*/.test(text);
+}
+function addPastedText(){
+  const ta = document.getElementById('pasteInput');
+  const text = ta.value;
+  const note = document.getElementById('pasteNote');
+  if (!text.trim()){ alert('번역할 텍스트를 먼저 붙여넣어 주세요.'); return null; }
+  const fmtSel = document.getElementById('pasteFormat').value;
+  const ext = fmtSel==='auto' ? (looksLikeMarkdown(text) ? 'md' : 'txt') : fmtSel;
+  const n = uploadedFiles.filter(x=>x.pasted).length + 1;
+  const base = n===1 ? '붙여넣은_텍스트' : `붙여넣은_텍스트_${n}`;
+  const slot = newSlot({
+    source: document.getElementById('pasteSource').value,
+    target: document.getElementById('pasteTarget').value,
+    position: document.getElementById('pastePosition').value
+  });
+  const item = {
+    id: uid(), name: `${base}.${ext}`, ext, raw: text, blocks: null, parseError: null, pasted: true,
+    outputBaseName: base, addLangSuffix: true, fb2OutputFormat: 'epub', mergeLangs: false, slots: [slot]
+  };
+  selectedFileId = item.id;
+  registerFileItem(item);
+  ta.value = '';
+  note.textContent = `✅ ${item.name} 로 추가했습니다 (${ext==='md'?'마크다운':'일반 텍스트'}).`;
+  return item;
+}
+(function initPastePanel(){
+  const src = document.getElementById('pasteSource');
+  const tgt = document.getElementById('pasteTarget');
+  src.innerHTML = SOURCE_LANGS.map(([c,n])=>`<option value="${c}">${n}</option>`).join('');
+  tgt.innerHTML = LANGS.map(([c,n])=>`<option value="${c}">${n}</option>`).join('');
+  document.getElementById('pasteAddBtn').addEventListener('click', ()=>{
+    const item = addPastedText();
+    if (item && computeIsMobile()) goToTab('settings');
+  });
+  document.getElementById('pasteRunBtn').addEventListener('click', ()=>{
+    const item = addPastedText();
+    if (item) runTranslation([item]);
+  });
+})();
 
 function removeFile(id){
   uploadedFiles = uploadedFiles.filter(f=>f.id!==id);
@@ -1022,6 +1109,317 @@ function parseTXT(raw){
         return lines.join('\n---\n');
       });
       return { content: out.join('\n\n')+'\n', isBinary:false };
+    }
+  };
+}
+
+/* ================= 🆕 Markdown 파서 =================
+   코드블록(```/~~~), 수식블록($$), 머리말(front matter), 표 구분행, 수평선, HTML 줄, 이미지 단독 줄,
+   링크 참조 정의는 손대지 않고 그대로 통과시킨다. 머리말(#)·목록·인용(>)·각주 기호는 prefix로 떼어
+   보존하고 글만 번역한다. 연속된 일반 문단 줄(소프트 줄바꿈)은 하나로 합쳐서 문장 단위 문맥을 살린다.
+   표는 셀 단위로 번역해서 같은 셀 안에 <br>로 원문/번역을 겹쳐 넣는다(헤더 구분행 구조를 깨지 않기 위해). */
+function fixMdInline(orig, tr){
+  let t = tr;
+  if (/\]\(/.test(orig)) t = t.replace(/\]\s+\(/g, '](');        // [텍스트] (url) → [텍스트](url)
+  if (/\*\*/.test(orig)) t = t.replace(/\*\*\s+([^*]+?)\s+\*\*/g, '**$1**');
+  if (/`/.test(orig)) t = t.replace(/`\s+([^`]+?)\s+`/g, '`$1`');
+  return t;
+}
+function parseMD(raw){
+  const lines = raw.replace(/\r\n/g,'\n').split('\n');
+  const segs = [];
+  const blocks = [];
+  const hasText = t => /\p{L}/u.test(t);
+  let para = null; // {kind:'para'|'quote', prefix, origLines:[], texts:[]}
+  let inList = false, prevBlank = true;
+  let fence = null; // {ch, len} | 'math'
+
+  function newBlock(text){ const id = 'b'+blocks.length; blocks.push({id, text}); return id; }
+  function flushPara(){
+    if (!para) return;
+    const text = para.texts.join(' ').replace(/\s+/g,' ').trim();
+    if (hasText(text)) segs.push({t:'blk', kind:para.kind, prefix:para.prefix, origLines:para.origLines, id:newBlock(text)});
+    else para.origLines.forEach(l=>segs.push({t:'raw', text:l}));
+    para = null;
+  }
+  const raw1 = l => { flushPara(); segs.push({t:'raw', text:l}); };
+
+  let i = 0;
+  // front matter
+  if (lines[0] && lines[0].trim()==='---'){
+    let j = 1;
+    while (j < lines.length && !/^(---|\.\.\.)\s*$/.test(lines[j])) j++;
+    if (j < lines.length){ for (let k=0;k<=j;k++) segs.push({t:'raw', text:lines[k]}); i = j+1; }
+  }
+
+  for (; i < lines.length; i++){
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (fence){
+      segs.push({t:'raw', text:line});
+      if (fence==='math'){ if (trimmed==='$$') fence = null; }
+      else if (new RegExp('^\\s*' + (fence.ch==='`'?'`':'~') + '{' + fence.len + ',}\\s*$').test(line)) fence = null;
+      continue;
+    }
+    const fm = line.match(/^\s*(`{3,}|~{3,})/);
+    if (fm){ flushPara(); fence = {ch: fm[1][0], len: fm[1].length}; segs.push({t:'raw', text:line}); inList=false; prevBlank=false; continue; }
+    if (trimmed==='$$'){ flushPara(); fence = 'math'; segs.push({t:'raw', text:line}); prevBlank=false; continue; }
+
+    if (trimmed===''){ raw1(line); prevBlank = true; continue; }
+
+    // 4칸 들여쓰기 코드블록(목록 문맥이 아닐 때만)
+    if (prevBlank && !inList && /^( {4}|\t)/.test(line) && !para){ segs.push({t:'raw', text:line}); continue; }
+    const wasBlank = prevBlank; prevBlank = false;
+
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line) || /^\s*=+\s*$/.test(line)){ raw1(line); continue; }   // 수평선 / setext 밑줄
+    if (/^\s*</.test(line) || /^\s*!\[[^\]]*\]\([^)]*\)\s*$/.test(line) || /^\s*\[[^\]^]+\]:\s+\S/.test(line)){ raw1(line); continue; }
+
+    // 표
+    if (/^\s*\|.*\|\s*$/.test(line)){
+      flushPara();
+      if (/^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line)){ segs.push({t:'raw', text:line}); continue; }
+      const inner = trimmed.replace(/^\|/,'').replace(/\|$/,'');
+      const cells = inner.split(/(?<!\\)\|/).map(c=>{
+        const text = c.trim();
+        return hasText(text) ? {text, id:newBlock(text)} : {text, id:null};
+      });
+      if (cells.some(c=>c.id)) segs.push({t:'row', cells, origLine:line});
+      else segs.push({t:'raw', text:line});
+      continue;
+    }
+
+    let m;
+    if ((m = line.match(/^(\s{0,3}#{1,6}\s+)(.*?)(\s+#+\s*)?$/)) && hasText(m[2])){
+      flushPara(); inList=false;
+      segs.push({t:'blk', kind:'line', prefix:m[1], suffix:m[3]||'', origLines:[line], id:newBlock(m[2].trim())});
+      continue;
+    }
+    if ((m = line.match(/^(\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)(.*)$/)) && hasText(m[2])){
+      flushPara(); inList=true;
+      segs.push({t:'blk', kind:'line', prefix:m[1], suffix:'', origLines:[line], id:newBlock(m[2].trim())});
+      continue;
+    }
+    if ((m = line.match(/^(\s*\[\^[^\]]+\]:\s+)(.*)$/)) && hasText(m[2])){
+      flushPara();
+      segs.push({t:'blk', kind:'line', prefix:m[1], suffix:'', origLines:[line], id:newBlock(m[2].trim())});
+      continue;
+    }
+    if ((m = line.match(/^(\s*(?:>\s?)+)(.*)$/))){
+      if (!hasText(m[2])){ raw1(line); continue; }
+      if (para && para.kind==='quote'){ para.origLines.push(line); para.texts.push(m[2].trim()); }
+      else { flushPara(); inList=false; para = {kind:'quote', prefix:m[1], origLines:[line], texts:[m[2].trim()]}; }
+      continue;
+    }
+    // 일반 문단 줄
+    if (para && para.kind==='para'){ para.origLines.push(line); para.texts.push(trimmed); }
+    else {
+      flushPara();
+      if (wasBlank && !/^\s/.test(line)) inList = false;
+      para = {kind:'para', prefix: line.match(/^\s*/)[0], origLines:[line], texts:[trimmed]};
+    }
+  }
+  flushPara();
+
+  function build(transList, position){
+    const out = [];
+    for (const sg of segs){
+      if (sg.t==='raw'){ out.push(sg.text); continue; }
+      if (sg.t==='row'){
+        const multi = transList.map(tl=> sg.cells.map(c=>{
+          if (!c.id) return c.text;
+          const tr = tl.translations[c.id];
+          return tr===undefined ? c.text : fixMdInline(c.text, tr).replace(/\|/g,'\\|').replace(/\n/g,' ');
+        }));
+        const have = sg.cells.map((c,ci)=> transList.some((tl,ti)=> c.id && tl.translations[c.id]!==undefined));
+        const cellsOut = sg.cells.map((c,ci)=>{
+          if (!c.id || !have[ci]) return c.text;
+          const trs = multi.map(r=>r[ci]);
+          if (position==='replace') return trs[0];
+          return position==='above' ? [...trs, c.text].join('<br>') : [c.text, ...trs].join('<br>');
+        });
+        out.push('| ' + cellsOut.join(' | ') + ' |');
+        continue;
+      }
+      // blk
+      const trs = transList.map(tl=>tl.translations[sg.id]).filter(v=>v!==undefined);
+      if (!trs.length){ sg.origLines.forEach(l=>out.push(l)); continue; }
+      const srcText = sg._text;
+      const piece = tr => [ sg.prefix + fixMdInline(srcText, tr).replace(/\n+/g,' ').trim() + (sg.suffix||'') ];
+      const sepLines = sg.kind==='para' ? [''] : (sg.kind==='quote' ? [sg.prefix.trimEnd()] : []);
+      const pieces = position==='replace' ? [piece(trs[0])]
+        : position==='above' ? [...trs.map(piece), sg.origLines]
+        : [sg.origLines, ...trs.map(piece)];
+      pieces.forEach((pc,pi)=>{ if (pi>0) sepLines.forEach(x=>out.push(x)); pc.forEach(x=>out.push(x)); });
+    }
+    return out.join('\n');
+  }
+  // 원문 텍스트 조회용(후처리 비교에 사용)
+  const textById = Object.fromEntries(blocks.map(b=>[b.id,b.text]));
+  segs.forEach(sg=>{ if (sg.t==='blk') sg._text = textById[sg.id]; });
+
+  return {
+    blocks,
+    rebuild: async (translations, position) => ({ content: build([{translations}], position), isBinary:false }),
+    rebuildMulti: async (transList) => ({ content: build(transList, 'below'), isBinary:false })
+  };
+}
+
+/* ================= 🆕 DOCX 파서 =================
+   word/document.xml(+각주/미주)의 문단(<w:p>)을 블록으로 뽑아서 번역한다. 표 셀 안의 문단도 포함.
+   텍스트상자(txbxContent)·mc:Fallback 안의 문단, 글자가 하나도 없는 문단은 건드리지 않는다.
+   rebuild는 호출할 때마다 원본 XML을 새로 파싱하므로 슬롯 간 번역 누수가 없다(EPUB와 같은 원칙).
+   위/아래 모드: 문단 서식(pPr)과 첫 글자 서식(rPr)을 복제한 번역 문단을 삽입(목록번호·구역나누기는 제거).
+   교체 모드: 원본 문단 안의 글자만 갈아끼워서 이미지·북마크 등은 그대로 유지. */
+const DOCX_W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const DOCX_SKIP = new Set(['txbxContent','Fallback','del','moveFrom','pPr']);
+function docxIsInSkipped(p){
+  for (let n=p.parentNode; n && n.nodeType===1; n=n.parentNode){
+    if (n.localName==='txbxContent' || n.localName==='Fallback') return true;
+  }
+  return false;
+}
+function docxParaText(p){
+  let out = '';
+  (function walk(n){
+    for (let c=n.firstChild; c; c=c.nextSibling){
+      if (c.nodeType!==1) continue;
+      const ln = c.localName;
+      if (DOCX_SKIP.has(ln)) continue;
+      if (ln==='t') out += c.textContent;
+      else if (ln==='tab' || ln==='br' || ln==='cr') out += ' ';
+      else if (ln==='noBreakHyphen') out += '-';
+      else walk(c);
+    }
+  })(p);
+  return out.replace(/\s+/g,' ').trim();
+}
+function docxTextRuns(p){
+  const runs = [];
+  (function walk(n){
+    for (let c=n.firstChild; c; c=c.nextSibling){
+      if (c.nodeType!==1) continue;
+      const ln = c.localName;
+      if (DOCX_SKIP.has(ln)) continue;
+      if (ln==='r'){
+        const has = Array.from(c.childNodes).some(x=>x.nodeType===1 && ['t','tab','br','cr','noBreakHyphen'].includes(x.localName));
+        if (has) runs.push(c);
+      } else walk(c);
+    }
+  })(p);
+  return runs;
+}
+function docxExtract(doc){
+  const items = [];
+  Array.from(doc.getElementsByTagNameNS(DOCX_W,'p')).forEach(p=>{
+    if (docxIsInSkipped(p)) return;
+    const text = docxParaText(p);
+    if (text && /\p{L}/u.test(text)) items.push({p, text});
+  });
+  return items;
+}
+function docxMakeRunText(doc, text){
+  const t = doc.createElementNS(DOCX_W,'w:t');
+  t.setAttributeNS('http://www.w3.org/XML/1998/namespace','xml:space','preserve');
+  t.textContent = text;
+  return t;
+}
+function docxSetParaText(doc, p, text){
+  const runs = docxTextRuns(p);
+  runs.forEach((r,idx)=>{
+    Array.from(r.childNodes).forEach(x=>{
+      if (x.nodeType===1 && ['t','tab','br','cr','noBreakHyphen'].includes(x.localName)) r.removeChild(x);
+    });
+    if (idx===0) r.appendChild(docxMakeRunText(doc, text));
+    else if (!Array.from(r.childNodes).some(x=>x.nodeType===1 && x.localName!=='rPr')) r.parentNode.removeChild(r);
+  });
+}
+function docxMakeTransPara(doc, p, text){
+  const np = doc.createElementNS(DOCX_W,'w:p');
+  const pPr = Array.from(p.childNodes).find(n=>n.nodeType===1 && n.localName==='pPr');
+  if (pPr){
+    const c = pPr.cloneNode(true);
+    Array.from(c.childNodes).forEach(x=>{
+      if (x.nodeType===1 && ['numPr','sectPr','pageBreakBefore','pPrChange'].includes(x.localName)) c.removeChild(x);
+      else if (x.nodeType===1 && x.localName==='rPr'){
+        Array.from(x.childNodes).forEach(y=>{ if (y.nodeType===1 && ['ins','del','moveFrom','moveTo','rPrChange'].includes(y.localName)) x.removeChild(y); });
+      }
+    });
+    // 스타일(List Number 등)에서 상속되는 번호까지 끄기 위해 numId=0 을 명시 — 번역 문단이 번호를 하나 더 먹지 않게 함.
+    // pPr 자식 순서(스키마)를 지키려고 pStyle/keepNext/keepLines/pageBreakBefore/framePr/widowControl 뒤에 삽입.
+    const before = new Set(['pStyle','keepNext','keepLines','pageBreakBefore','framePr','widowControl']);
+    let insertAfter = null;
+    Array.from(c.childNodes).forEach(x=>{ if (x.nodeType===1 && before.has(x.localName)) insertAfter = x; });
+    const numPr = doc.createElementNS(DOCX_W,'w:numPr');
+    const numId = doc.createElementNS(DOCX_W,'w:numId');
+    numId.setAttributeNS(DOCX_W,'w:val','0');
+    numPr.appendChild(numId);
+    c.insertBefore(numPr, insertAfter ? insertAfter.nextSibling : c.firstChild);
+    np.appendChild(c);
+  } else {
+    const c = doc.createElementNS(DOCX_W,'w:pPr');
+    np.appendChild(c);
+  }
+  const r = doc.createElementNS(DOCX_W,'w:r');
+  const run0 = docxTextRuns(p)[0];
+  const rPr = run0 && Array.from(run0.childNodes).find(n=>n.nodeType===1 && n.localName==='rPr');
+  if (rPr) r.appendChild(rPr.cloneNode(true));
+  r.appendChild(docxMakeRunText(doc, text));
+  np.appendChild(r);
+  return np;
+}
+async function parseDOCX(raw){
+  const zip = await JSZip.loadAsync(raw);
+  if (!zip.file('word/document.xml')) throw new Error('올바른 DOCX 파일이 아닙니다 (word/document.xml 없음)');
+  const partNames = ['word/document.xml','word/footnotes.xml','word/endnotes.xml'].filter(n=>zip.file(n));
+  const parts = [];
+  const blocks = [];
+  for (const name of partNames){
+    const xml = await zip.file(name).async('string');
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) throw new Error(`${name} 해석 실패`);
+    const items = docxExtract(doc);
+    const start = blocks.length;
+    items.forEach((it,i)=> blocks.push({id:'b'+(start+i), text:it.text}));
+    parts.push({name, xml, start, count:items.length});
+  }
+  async function build(applyFn){
+    for (const part of parts){
+      if (!part.count) continue;
+      const doc = new DOMParser().parseFromString(part.xml, 'application/xml');
+      const items = docxExtract(doc);
+      items.forEach((it,i)=> applyFn(doc, it.p, 'b'+(part.start+i)));
+      let out = new XMLSerializer().serializeToString(doc);
+      if (!/^<\?xml/.test(out)) out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + out;
+      zip.file(part.name, out);
+    }
+    return await zip.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression:'DEFLATE'});
+  }
+  return {
+    blocks,
+    rebuild: async (translations, position) => {
+      const blob = await build((doc, p, id)=>{
+        const tr = translations[id];
+        if (tr===undefined) return;
+        const text = String(tr).replace(/\s*\n+\s*/g,' ').trim();
+        if (position==='replace') docxSetParaText(doc, p, text);
+        else if (position==='above') p.parentNode.insertBefore(docxMakeTransPara(doc, p, text), p);
+        else p.parentNode.insertBefore(docxMakeTransPara(doc, p, text), p.nextSibling);
+      });
+      return { content: blob, isBinary:true };
+    },
+    rebuildMulti: async (transList) => {
+      const blob = await build((doc, p, id)=>{
+        let ref = p;
+        transList.forEach(t=>{
+          const tr = t.translations[id];
+          if (tr===undefined) return;
+          const np = docxMakeTransPara(doc, p, String(tr).replace(/\s*\n+\s*/g,' ').trim());
+          ref.parentNode.insertBefore(np, ref.nextSibling);
+          ref = np;
+        });
+      });
+      return { content: blob, isBinary:true };
     }
   };
 }
@@ -1569,6 +1967,8 @@ async function parseFile(item){
     case 'srt': return parseSRT(item.raw);
     case 'vtt': return parseVTT(item.raw);
     case 'txt': return parseTXT(item.raw);
+    case 'md': return parseMD(item.raw);
+    case 'docx': return await parseDOCX(item.raw);
     case 'epub': return await parseEPUB(item.raw);
     case 'fb2': return await parseFB2(item.raw);
     default: throw new Error('지원하지 않는 형식');
@@ -2367,13 +2767,50 @@ function renderJobList(jobs){
   ).join('');
   el.innerHTML = summary + rows;
 }
+async function copyTextToClipboard(text){
+  try{
+    if (navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(text); return true; }
+  } catch(e){ /* 아래 폴백 */ }
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.setAttribute('readonly','');
+  ta.style.position='fixed'; ta.style.top='0'; ta.style.left='0'; ta.style.opacity='0';
+  document.body.appendChild(ta);
+  ta.select(); ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try{ ok = document.execCommand('copy'); } catch(e){ ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
 function renderResultsList(items){
   const el = document.getElementById('results');
   el.innerHTML = '';
   items.forEach(r=>{
     const div = document.createElement('div');
     div.className = 'result-item';
-    div.innerHTML = `<span class="rname">${escapeHtml(r.name)}</span><a href="${r.url}" download="${escapeHtml(r.name)}">다운로드</a>`;
+    const hasText = typeof r.text === 'string';
+    div.innerHTML = `<span class="rname">${escapeHtml(r.name)}</span>`
+      + (hasText ? `<button type="button" class="rbtn rprev">미리보기</button><button type="button" class="rbtn rcopy">📋 복사</button>` : '')
+      + `<a href="${r.url}" download="${escapeHtml(r.name)}">다운로드</a>`;
+    if (hasText){
+      div.classList.add('has-extra');
+      const copyBtn = div.querySelector('.rcopy');
+      copyBtn.addEventListener('click', async ()=>{
+        const ok = await copyTextToClipboard(r.text);
+        const prev = '📋 복사';
+        copyBtn.textContent = ok ? '✅ 복사됨' : '⚠️ 복사 실패(미리보기에서 직접 선택해 주세요)';
+        copyBtn.classList.toggle('ok', ok);
+        setTimeout(()=>{ copyBtn.textContent = prev; copyBtn.classList.remove('ok'); }, 1800);
+      });
+      let pre = null;
+      div.querySelector('.rprev').addEventListener('click', e=>{
+        if (pre){ pre.remove(); pre = null; e.target.textContent = '미리보기'; return; }
+        pre = document.createElement('pre');
+        pre.className = 'rpreview';
+        pre.textContent = r.text.length > 30000 ? r.text.slice(0,30000) + '\n\n… (이하 생략, 전체는 복사/다운로드로 받으세요)' : r.text;
+        div.appendChild(pre);
+        e.target.textContent = '접기';
+      });
+    }
     el.appendChild(div);
   });
 }
@@ -2459,7 +2896,7 @@ async function runTranslation(files){
           zip.file(outName, content);
           const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
           const url = URL.createObjectURL(blobForLink);
-          resultItems.push({ name: outName, url });
+          resultItems.push({ name: outName, url, text: isBinary ? null : content });
           appendLog(`✅ ${outName} 생성 완료 (${parsed.blocks.length}개 블록)`);
         }
         job.status = 'done';
@@ -2483,7 +2920,7 @@ async function runTranslation(files){
         zip.file(outName, content);
         const blobForLink = isBinary ? content : new Blob([content], {type:'text/plain;charset=utf-8'});
         const url = URL.createObjectURL(blobForLink);
-        resultItems.push({ name: outName, url });
+        resultItems.push({ name: outName, url, text: isBinary ? null : content });
         appendLog(`✅ ${outName} 생성 완료 (병합 파일, ${parsed.blocks.length}개 블록 × ${slotResults.length}개 언어)`);
       } catch(e){
         appendLog(`❌ ${file.name} 병합 파일 생성 실패: ${e.message}`);
